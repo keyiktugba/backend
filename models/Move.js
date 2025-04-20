@@ -5,7 +5,7 @@ const moveSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Game',
     required: true
-  },
+  }, 
   kullanici_id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
