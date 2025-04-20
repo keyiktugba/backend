@@ -16,69 +16,61 @@ const generateToken = (id) => {
 // @access  Public
 router.post('/register', async (req, res) => {
   try {
-    const { username, email, password } = req.body;
+    const { kullanici_adi, email, sifre } = req.body;
 
-    // Kullanıcı kontrolü
     const userExists = await User.findOne({ email });
     if (userExists) {
       return res.status(400).json({ message: 'Bu email adresi zaten kullanılıyor' });
     }
 
-    // Kullanıcı oluşturma
-    const user = await User.create({
-      username,
+    const yeniKullanici = await User.create({
+      kullanici_adi,
       email,
-      password
+      sifre_hash: sifre
     });
 
-    if (user) {
-      res.status(201).json({
-        _id: user._id,
-        username: user.username,
-        email: user.email,
-        points: user.points,
-        token: generateToken(user._id)
-      });
-    } else {
-      res.status(400).json({ message: 'Geçersiz kullanıcı verisi' });
-    }
+    res.status(201).json({
+      _id: yeniKullanici._id,
+      kullanici_adi: yeniKullanici.kullanici_adi,
+      email: yeniKullanici.email,
+      genel_puan: yeniKullanici.genel_puan,
+      token: generateToken(yeniKullanici._id)
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
+
 
 // @desc    Kullanıcı girişi
 // @route   POST /api/users/login
 // @access  Public
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, sifre } = req.body;
 
-    // Email kontrolü
-    const user = await User.findOne({ email }).select('+password');
+    const user = await User.findOne({ email });
     if (!user) {
       return res.status(401).json({ message: 'Geçersiz email veya şifre' });
     }
 
-    // Şifre kontrolü
-    const isMatch = await user.matchPassword(password);
+    const isMatch = await user.matchPassword(sifre);
     if (!isMatch) {
       return res.status(401).json({ message: 'Geçersiz email veya şifre' });
     }
 
     res.json({
       _id: user._id,
-      username: user.username,
+      kullanici_adi: user.kullanici_adi,
       email: user.email,
-      points: user.points,
-      gamesPlayed: user.gamesPlayed,
-      gamesWon: user.gamesWon,
+      genel_puan: user.genel_puan,
       token: generateToken(user._id)
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });
+
 
 // @desc    Kullanıcı profilini getir
 // @route   GET /api/users/profile
