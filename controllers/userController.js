@@ -11,7 +11,6 @@ const generateToken = (id) => {
 };
 
 // Kullanıcı kaydı
-// Kullanıcı kaydı
 exports.registerUser = async (req, res) => {
     try {
       const { kullanici_adi, email, sifre } = req.body;
@@ -42,7 +41,6 @@ exports.registerUser = async (req, res) => {
   };  
 
 // Kullanıcı girişi
-// Kullanıcı girişi
 exports.loginUser = async (req, res) => {
     try {
       const { email, sifre } = req.body;
@@ -71,8 +69,6 @@ exports.loginUser = async (req, res) => {
     }
   };
   
-
-// Kullanıcı profilini getir
 // Kullanıcı profilini getir
 exports.getUserProfile = async (req, res) => {
     try {

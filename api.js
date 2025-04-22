@@ -2,10 +2,10 @@ const express = require('express');
 const router = express.Router();
 
 // Import routes
-const userRoutes = require('./userRoutes');
-const gameRoutes = require('./gameRoutes');
-const wordRoutes = require('./wordRoutes');
-const moveRoutes = require('./moveRoutes');
+const userRoutes = require('./routes/userRoutes');
+const gameRoutes = require('./routes/gameRoutes');
+const wordRoutes = require('./routes/wordRoutes');
+const moveRoutes = require('./routes/moveRoutes');
 
 // Use routes
 router.use('/users', userRoutes);

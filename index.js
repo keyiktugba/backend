@@ -1,21 +1,23 @@
+//index.js
 const express = require("express");
 const mongoose = require("mongoose");
 const dotenv = require('dotenv');
 const cors = require('cors');
 const http = require('http');
 const socketIo = require('socket.io');
+const apiRoutes = require('./api');
 
-// Load environment variables
 dotenv.config();
 
 const PORT = process.env.PORT || 3001;
 
-// Express app initialization
 const app = express();
 
-// Middleware
 app.use(cors());
 app.use(express.json());
+
+// API routes
+app.use('/api', apiRoutes);
 
 // Connect to MongoDB
 mongoose.connect("mongodb+srv://medihatugbakeyik:Hh5U8sFS421LnavH@wordmine1.klza6gv.mongodb.net/wordmines")
@@ -26,12 +28,6 @@ mongoose.connect("mongodb+srv://medihatugbakeyik:Hh5U8sFS421LnavH@wordmine1.klza
 app.get('/', (req, res) => {
   res.send('Kelime Mayınları API çalışıyor');
 });
-
-// API routes
-app.use('/api/users', require('./routes/userRoutes'));
-app.use('/api/games', require('./routes/gameRoutes'));
-app.use('/api/words', require('./routes/wordRoutes'));
-app.use('/api/moves', require('./routes/moveRoutes'));
 
 // HTTP server and Socket.IO setup
 const server = http.createServer(app);
@@ -46,7 +42,6 @@ const io = socketIo(server, {
 io.on('connection', (socket) => {
   console.log('Yeni bir kullanıcı bağlandı', socket.id);
   
-  // Game related events
   socket.on('join-game', (gameId) => {
     socket.join(gameId);
     console.log(`Kullanıcı ${socket.id} ${gameId} odasına katıldı`);
@@ -58,7 +53,6 @@ io.on('connection', (socket) => {
   });
   
   socket.on('game-move', (data) => {
-    // Broadcast the move to all players in the game room
     io.to(data.gameId).emit('move-made', {
       playerId: data.playerId,
       move: data.move
@@ -85,7 +79,7 @@ io.on('connection', (socket) => {
   });
 });
 
-// Start the server
+// Start the server, silme
 server.listen(PORT, () => {
-  console.log(`Sunucu ${PORT} portunda çalışıyor`);
+  console.log(`Sunucu çalışıyor 🚀`);
 });
