@@ -66,10 +66,15 @@ userSchema.methods.matchPassword = async function(enteredPassword) {
 };
 
 // Başarı yüzdesini hesaplama
-userSchema.methods.hesaplaBasariYuzdesi = function() {
-  if (this.toplam_oyun === 0) return 0;
-  return (this.kazanilan_oyun / this.toplam_oyun) * 100;
-};
+userSchema.pre('save', function(next) {
+  if (this.toplam_oyun > 0) {
+    this.basari_yuzdesi = (this.kazanilan_oyun / this.toplam_oyun) * 100;
+  } else {
+    this.basari_yuzdesi = 0;
+  }
+  next();
+});
+
 
 const User = mongoose.model('User', userSchema);
 

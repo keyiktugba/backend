@@ -83,7 +83,18 @@ const gameSchema = new mongoose.Schema({
     kazandi_mi: {
       type: Boolean,
       default: false
+    },
+    puan_durumu: {
+      type: Map,
+      of: Number,
+      default: {}
+    },
+    bulunan_kelimeler: {
+      type: Map,
+      of: [String],
+      default: {}
     }
+    
   }],
   
   // Mayınlar
@@ -159,8 +170,6 @@ gameSchema.methods.mayinOdulYerlestir = function() {
     { tip: 'Ekstra Hamle Jokeri', adet: 2 }
   ];
   
-  // Rastgele konumları belirleyip yerleştirme mantığı buraya gelecek
-  // ...
 };
 
 // Harf havuzunu başlatma
@@ -168,9 +177,34 @@ gameSchema.methods.harfHavuzuOlustur = function() {
   const harfler = [
     { harf: 'A', adet: 12, puan: 1 },
     { harf: 'B', adet: 2, puan: 3 },
-    // ... diğer harfler
+    { harf: 'C', adet: 2, puan: 4 },
+    { harf: 'Ç', adet: 2, puan: 4 },
+    { harf: 'D', adet: 2, puan: 3 },
+    { harf: 'E', adet: 8, puan: 1 },
+    { harf: 'F', adet: 1, puan: 7 },
+    { harf: 'G', adet: 1, puan: 5 },
+    { harf: 'Ğ', adet: 1, puan: 8 },
+    { harf: 'H', adet: 1, puan: 5 },
+    { harf: 'I', adet: 4, puan: 2 },
+    { harf: 'İ', adet: 7, puan: 1 },
+    { harf: 'J', adet: 1, puan: 10 },
+    { harf: 'K', adet: 7, puan: 1 },
+    { harf: 'L', adet: 7, puan: 1 },
+    { harf: 'M', adet: 4, puan: 2 },
+    { harf: 'N', adet: 5, puan: 1 },
+    { harf: 'O', adet: 3, puan: 2 },
+    { harf: 'Ö', adet: 1, puan: 7 },
+    { harf: 'P', adet: 1, puan: 5 },
+    { harf: 'R', adet: 6, puan: 1 },
+    { harf: 'S', adet: 3, puan: 2 },
+    { harf: 'Ş', adet: 2, puan: 4 },
+    { harf: 'T', adet: 5, puan: 1 },
+    { harf: 'U', adet: 3, puan: 2 },
+    { harf: 'Ü', adet: 2, puan: 3 },
+    { harf: 'V', adet: 1, puan: 7 },
+    { harf: 'Y', adet: 2, puan: 3 },
     { harf: 'Z', adet: 2, puan: 4 },
-    { harf: 'JOKER', adet: 2, puan: 0 }
+    { harf: 'JOKER', adet: 2, puan: 0 }    
   ];
   
   this.harf_havuzu = harfler;

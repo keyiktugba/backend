@@ -6,24 +6,32 @@ const Word = require('../models/Word');
 // Yeni oyun oluştur
 exports.createGame = async (req, res) => {
   try {
-    const { userId } = req.body;
-    
-    // Kullanıcı kontrolü
+    const { userId, oyun_turu } = req.body;
+
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ message: 'Kullanıcı bulunamadı' });
     }
-    
-    // Yeni oyun oluştur
-    const game = await Game.create({
-      players: [userId],
-      status: 'waiting',
-      currentTurn: userId
+
+    const game = new Game({
+      oyuncular: [{
+        kullanici_id: userId,
+        kullanici_adi: user.username,
+        sira_no: 1,
+        sira_bende_mi: true
+      }],
+      oyun_turu,
+      mevcut_sira: userId
     });
-    
+
+    game.harfHavuzuOlustur();
+    game.mayinOdulYerlestir();
+
+    await game.save();
+
     res.status(201).json({
-      gameId: game._id,
-      status: game.status
+      message: 'Oyun başarıyla oluşturuldu',
+      gameId: game._id
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -35,132 +43,124 @@ exports.joinGame = async (req, res) => {
   try {
     const { gameId, userId } = req.body;
     
-    // Oyun kontrolü
     const game = await Game.findById(gameId);
-    if (!game) {
-      return res.status(404).json({ message: 'Oyun bulunamadı' });
-    }
+    if (!game) return res.status(404).json({ message: 'Oyun bulunamadı' });
     
-    // Kullanıcı kontrolü
     const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ message: 'Kullanıcı bulunamadı' });
-    }
-    
-    // Oyun dolu mu kontrolü
-    if (game.players.length >= 2) {
+    if (!user) return res.status(404).json({ message: 'Kullanıcı bulunamadı' });
+
+    if (game.oyuncular.length >= 2) {
       return res.status(400).json({ message: 'Oyun dolu' });
     }
-    
-    // Kullanıcı zaten oyunda mı kontrolü
-    if (game.players.includes(userId)) {
+
+    if (game.oyuncular.find(o => o.kullanici_id.toString() === userId)) {
       return res.status(400).json({ message: 'Zaten bu oyundasınız' });
     }
-    
-    // Oyuna katıl
-    game.players.push(userId);
-    
-    // Oyun başlatılabilir mi kontrolü
-    if (game.players.length === 2) {
-      game.status = 'active';
-      game.startedAt = Date.now();
-      
-      // Basit bir tahta oluştur (gerçek uygulamada daha karmaşık olabilir)
-      const board = generateGameBoard();
-      game.board = board;
+
+    game.oyuncular.push({
+      kullanici_id: userId,
+      kullanici_adi: user.kullanici_adi,
+      sira_no: 2,
+      sira_bende_mi: false
+    });
+
+    if (game.oyuncular.length === 2) {
+      game.durum = 'aktif';
+      game.baslangic_zamani = new Date();
+      game.tahta = generateGameBoard();
     }
-    
+
     await game.save();
-    
+
     res.json({
+      message: 'Oyuna katıldınız',
       gameId: game._id,
-      status: game.status,
-      players: game.players,
-      board: game.board
+      durum: game.durum,
+      oyuncular: game.oyuncular,
+      tahta: game.tahta
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
+
 // Oyun bilgisini getir
 exports.getGame = async (req, res) => {
   try {
     const game = await Game.findById(req.params.id)
-      .populate('players', 'username')
-      .populate('currentTurn', 'username')
-      .populate('winner', 'username');
-    
+      .populate('oyuncular.kullanici_id', 'kullanici_adi')
+      .populate('mevcut_sira', 'kullanici_adi')
+      .populate('kazanan', 'kullanici_adi');
+
     if (!game) {
       return res.status(404).json({ message: 'Oyun bulunamadı' });
     }
-    
+
     res.json(game);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
+
 // Kelime doğrulama
 exports.verifyWord = async (req, res) => {
   try {
     const { gameId, userId, word } = req.body;
-    
-    // Kelimeyi kontrol et
-    const wordExists = await Word.findOne({ word: word.toLowerCase() });
-    
-    // Oyunu güncelle
+
+    const wordExists = await Word.findOne({ kelime: word.toLowerCase() }); // Modelde 'kelime' alanı varsa
+
     const game = await Game.findById(gameId);
-    if (!game) {
-      return res.status(404).json({ message: 'Oyun bulunamadı' });
-    }
-    
-    // Kullanıcı sırası kontrolü
-    if (game.currentTurn.toString() !== userId) {
+    if (!game) return res.status(404).json({ message: 'Oyun bulunamadı' });
+
+    // Sıra kontrolü
+    if (game.mevcut_sira.toString() !== userId) {
       return res.status(400).json({ message: 'Şu anda sıra sizde değil' });
     }
-    
-    // Oyun aktif mi kontrolü
-    if (game.status !== 'active') {
-      return res.status(400).json({ message: 'Oyun aktif değil' });
+
+    // Oyun aktif mi?
+    if (game.durum !== 'aktif') {
+      return res.status(400).json({ message: 'Oyun şu an aktif değil' });
     }
-    
+
     let result = false;
     let points = 0;
-    
+
     if (wordExists) {
-      // Kelime geçerli
       result = true;
-      points = word.length; // Basit bir puan hesabı
-      game.score.set(userId, (game.score.get(userId) || 0) + points);
-      
-      // Bulunan kelimeleri kaydet
-      const wordsFound = game.wordsFound.get(userId) || [];
-      wordsFound.push(word);
-      game.wordsFound.set(userId, wordsFound);
-      
+      points = word.length;
+
+      // PUAN DURUMU güncelle
+      const mevcutPuan = game.puan_durumu.get(userId) || 0;
+      game.puan_durumu.set(userId, mevcutPuan + points);
+
+      // BULUNAN KELİMELER güncelle
+      const kelimeler = game.bulunan_kelimeler.get(userId) || [];
+      kelimeler.push(word.toLowerCase());
+      game.bulunan_kelimeler.set(userId, kelimeler);
+
       // Sırayı diğer oyuncuya ver
-      const otherPlayer = game.players.find(player => player.toString() !== userId);
+      const otherPlayer = game.oyuncular.find(o => o.kullanici_id.toString() !== userId);
       if (otherPlayer) {
-        game.currentTurn = otherPlayer;
+        game.mevcut_sira = otherPlayer.kullanici_id;
       }
-    } else {
-      // Kelime geçersiz
-      result = false;
     }
-    
+
     await game.save();
-    
+
     res.json({
       result,
       points,
-      currentScore: game.score.get(userId) || 0,
-      currentTurn: game.currentTurn
+      currentScore: game.puan_durumu.get(userId) || 0,
+      nextTurn: game.mevcut_sira
     });
+
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
+
 
 // Aktif oyunları listele
 exports.getActiveGames = async (req, res) => {

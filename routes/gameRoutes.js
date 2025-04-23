@@ -9,8 +9,8 @@ const {
   getActiveGames
 } = require('../controllers/gameController');
 
-// Yeni oyun oluştur
-router.post('/create', createGame);
+// Yeni oyun başlat
+router.post('/start', createGame);
 
 // Oyuna katıl
 router.post('/join', joinGame);
