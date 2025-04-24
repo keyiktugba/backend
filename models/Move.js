@@ -1,3 +1,4 @@
+//Move.js
 const mongoose = require('mongoose');
 
 // Tahta üzerine yerleştirilen harflerin koordinatları ve harfleri

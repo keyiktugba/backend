@@ -86,7 +86,7 @@ async function createMove(req, res) {
 
     // 5) Move kaydet ve oyunu güncelle
     const move = await Move.create({
-      gameId,
+      gameId: game._id,
       playerId,
       placed,
       validWords,
