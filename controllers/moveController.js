@@ -19,30 +19,48 @@ async function createMove(req, res) {
       return res.status(404).json({ message: 'Game bulunamadı.' });
     }
 
+    // 2) Oyuncu sırası kontrolü
+    if (game.lastPlayerId === playerId) {
+      return res.status(400).json({ message: 'Sıra diğer oyuncuda.' });
+    }
+    game.lastPlayerId = playerId;
+
     // Eğer game.board yoksa başlat
     if (!game.board) {
       game.board = Array(15).fill().map(() => Array(15).fill(''));
     }
 
-    // 2) Geçersiz koordinatlar kontrolü
+    // 3) Aynı koordinata birden fazla harf koyulmasın
+    const coordSet = new Set();
+    for (const { x, y } of placed) {
+      const key = `${x},${y}`;
+      if (coordSet.has(key)) {
+        return res.status(400).json({ message: `Aynı koordinata birden fazla harf koyulamaz: (${x},${y})` });
+      }
+      coordSet.add(key);
+    }
+
+    // 4) Geçersiz koordinatlar kontrolü
     placed.forEach(({ x, y }) => {
       if (!inBounds(x, y)) {
         console.error(`Invalid coordinates: x: ${x}, y: ${y}`);
         return res.status(400).json({ message: `Geçersiz koordinatlar: x: ${x}, y: ${y}` });
       }
     });
+    
 
-    // 3) Tahtayı geçici olarak güncelle (geçici olarak yerleştir)
-    placed.forEach(({ x, y, letter }) => {
-      if (inBounds(x, y)) {
-        game.board[x][y] = letter;
+    // 5) Tahtayı geçici olarak güncelle (önce çakışma var mı kontrol et)
+    for (const { x, y, letter } of placed) {
+      if (game.board[x][y] !== '') {
+        return res.status(400).json({ message: `(${x}, ${y}) konumunda zaten bir harf var.` });
       }
-    });
+      game.board[x][y] = letter;
+    }
 
-    // 4) Yalnızca soldan sağa ve yukarıdan aşağıya kelime tarama
+    // 6) Kelime bulma işlemi
     const directions = [
-      { dx: 1, dy: 0 },  // Yatay (soldan sağa)
-      { dx: 0, dy: 1 },  // Dikey (yukarıdan aşağıya)
+      { dx: 1, dy: 0 },  // Yatay
+      { dx: 0, dy: 1 },  // Dikey
     ];
 
     const foundWords = []; // Bulunan kelimeleri tutacağımız array
@@ -75,34 +93,30 @@ async function createMove(req, res) {
       });
     });
 
-    // 5) Geçersiz kelimeler varsa hata mesajı
+    // 7) Geçersiz kelime kontrolü
     for (const { word } of foundWords) {
-      if (!validateWord(word)) {  // Eğer kelime geçerli değilse
-        // Geçersiz kelime bulundu, tahtadan geri al
+      if (!validateWord(word)) {
         placed.forEach(({ x, y }) => {
-          game.board[x][y] = '';  // Yerleştirilen harfleri geri al
+          game.board[x][y] = '';
         });
         return res.status(400).json({ message: `Geçersiz kelime oluşturuluyor: ${word}` });
       }
     }
 
-    // 6) Geçerli kelimeleri filtrele ve puanla
+    // 8) Geçerli kelimeleri puanla
     let totalPoints = 0;
     const validWords = [];
+
     for (const { word, coords } of foundWords) {
       if (validateWord(word)) {
         let wordPoints = 0;
 
-        // Her bir harfi kontrol et ve bonus taşlarını uygulayarak puan hesapla
         coords.forEach(({ x, y }) => {
           let letterPts = letterScore(game.board[x][y]);
-
-          // Bonus taşlarını kontrol et ve puanı uygula
           const bonusType = getTileBonus(x, y);
           if (bonusType) {
-            letterPts = applyBonus(letterPts, bonusType);  // Bonus türüne göre puanı uygula
+            letterPts = applyBonus(letterPts, bonusType);
           }
-
           wordPoints += letterPts;
         });
 
@@ -111,7 +125,7 @@ async function createMove(req, res) {
       }
     }
 
-    // 7) Move kaydet ve oyunu güncelle
+    // 9) Move kaydet ve oyunu güncelle
     const move = await Move.create({
       gameId: game._id,
       playerId,
@@ -120,23 +134,21 @@ async function createMove(req, res) {
       totalPoints
     });
 
-    // 8) Game skorunu ve hareket geçmişini güncelle
     game.score += totalPoints;
 
-    // Game.moves'i kontrol et
     if (!game.moves) {
-      game.moves = [];  // Initialize moves if it's undefined
+      game.moves = [];
     }
 
     game.moves.push({ playerId, placed });
     await game.save();
 
-    // 9) Yanıt dön
+    // 10) Yanıt dön
     return res.status(201).json({
       move,
       board: game.board,
       score: game.score,
-      foundWords  // Bulunan kelimeleri JSON yanıtında ekleyelim
+      foundWords
     });
 
   } catch (error) {
