@@ -1,4 +1,3 @@
-//moveController.js
 const { validateWord, letterScore, getTileBonus, applyBonus } = require('../utils/wordUtils');
 const Move = require('../models/Move');
 const Game = require('../models/Game');
@@ -114,6 +113,12 @@ async function createMove(req, res) {
 
     // 7) Game skorunu ve hareket geçmişini güncelle
     game.score += totalPoints;
+
+    // Ensure moves array is initialized
+    if (!game.moves) {
+      game.moves = [];  // Initialize moves if it's undefined
+    }
+
     game.moves.push({ playerId, placed });
     await game.save();
 
