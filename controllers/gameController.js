@@ -13,7 +13,8 @@ exports.joinOrCreateGame = async (req, res) => {
     // 2) Bekleyen bir oyun var mı? (tek oyunculu, başlamamış)
     let game = await Game.findOne({ 
       isActive: false, 
-      players: { $size: 1 } 
+      players: { $size: 1 },
+      type: type // Burada type parametresini de kontrol ediyoruz
     });
 
     if (game) {
