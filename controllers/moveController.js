@@ -106,8 +106,8 @@ async function createMove(req, res) {
     });
 
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Sunucu hatası.' });
+    console.error("Hata Detayı:", error);  // Hata detaylarını konsola yazdır
+    return res.status(500).json({ message: 'Sunucu hatası.', error: error.message });  // Hata mesajını döndür
   }
 }
 
