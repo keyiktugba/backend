@@ -1,27 +1,22 @@
-// routes/gameRoutes.js
 const express = require('express');
 const router = express.Router();
 const {
-  createGame,
-  joinGame,
-  getGame,
-  verifyWord,
-  getActiveGames
+  joinOrCreateGame,
+  getActiveGames,
+  getCompletedGames,
+  getAllGames
 } = require('../controllers/gameController');
 
-// Yeni oyun oluştur
-router.post('/create', createGame);
+// Oyuna katılma ya da yeni oyun oluşturma
+router.post('/join-or-create', joinOrCreateGame);
 
-// Oyuna katıl
-router.post('/join', joinGame);
+// Aktif oyunları getirme
+router.get('/active', getActiveGames);
 
-// Oyun bilgisini getir
-router.get('/:id', getGame);
+// Biten oyunları getirme
+router.get('/completed', getCompletedGames);
 
-// Kelime doğrulama
-router.post('/verify-word', verifyWord);
-
-// Aktif oyunları listele
-router.get('/', getActiveGames);
+// Tüm oyunları getirme
+router.get('/all', getAllGames);
 
 module.exports = router;
