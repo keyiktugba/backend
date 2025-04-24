@@ -7,46 +7,6 @@ function inBounds(x, y) {
   return x >= 0 && x < 15 && y >= 0 && y < 15;
 }
 
-// Komşuluk kontrolü: Yalnızca geçerli sınırlar içinde kalan hücrelerde geçerli kelimeler arar
-function getNeighboringWords(x, y, game) {
-  const directions = [
-    { dx: 1, dy: 0 },  // Yatay (soldan sağa)
-    { dx: 0, dy: 1 },  // Dikey (yukarıdan aşağıya)
-    { dx: -1, dy: 0 }, // Yatay (sağdan sola)
-    { dx: 0, dy: -1 }, // Dikey (aşağıdan yukarıya)
-  ];
-
-  const foundWords = [];
-
-  // Tüm yönlerdeki kelimeleri bul
-  directions.forEach(({ dx, dy }) => {
-    let bx = x, by = y;
-
-    // Taramanın başladığı noktayı bul: boş hücreleri geç
-    while (inBounds(bx - dx, by - dy) && game.board[bx - dx][by - dy] !== '') {
-      bx -= dx; by -= dy;
-    }
-
-    // Kelimeyi oluştur ve koordinatları topla
-    let word = '', coords = [];
-    let cx = bx, cy = by;
-
-    // Yatay ve dikey tarama: Başlangıç noktasından itibaren devam et
-    while (inBounds(cx, cy) && game.board[cx][cy] !== '') {
-      word   += game.board[cx][cy];
-      coords.push({ x: cx, y: cy });
-      cx += dx; cy += dy;
-    }
-
-    // Kelimeyi geçerli olup olmadığını kontrol et
-    if (word.length > 1) {
-      foundWords.push({ word, coords });
-    }
-  });
-
-  return foundWords;
-}
-
 // Hamle işleme
 async function createMove(req, res) {
   try {
@@ -79,34 +39,60 @@ async function createMove(req, res) {
       }
     });
 
-    // 4) Komşu kelimeleri kontrol et
-    const foundSet = new Set();
+    // 4) Yalnızca soldan sağa ve yukarıdan aşağıya kelime tarama
+    const directions = [
+      { dx: 1, dy: 0 },  // Yatay (soldan sağa)
+      { dx: 0, dy: 1 },  // Dikey (yukarıdan aşağıya)
+    ];
 
-    placed.forEach(({ x, y }) => {
-      const neighboringWords = getNeighboringWords(x, y, game);
+    const foundWords = []; // Bulunan kelimeleri tutacağımız array
 
-      neighboringWords.forEach(({ word, coords }) => {
-        // Geçersiz kelimeleri kontrol et
-        if (!validateWord(word)) {
-          placed.forEach(({ x, y }) => {
-            game.board[x][y] = '';  // Yerleştirilen kelimeyi geri al
-          });
-          return res.status(400).json({
-            message: `Geçersiz kelime oluşturuluyor: ${word}`
-          });
+    // Komşuluk ve kelime kontrolü
+    placed.forEach(({ x, y, letter }) => {
+      directions.forEach(({ dx, dy }) => {
+        let bx = x, by = y;
+
+        // Taramanın başladığı noktayı bul: boş hücreleri geç
+        while (inBounds(bx - dx, by - dy) && game.board[bx - dx][by - dy] !== '') {
+          bx -= dx; by -= dy;
         }
 
-        foundSet.add(JSON.stringify({ word, coords }));
+        // Kelimeyi oluştur ve koordinatları topla
+        let word = '', coords = [];
+        let cx = bx, cy = by;
+
+        // Yalnızca yatay ve dikey yönlerde tarama
+        while (inBounds(cx, cy) && game.board[cx][cy] !== '') {
+          word   += game.board[cx][cy];
+          coords.push({ x: cx, y: cy });
+          cx += dx; cy += dy;
+        }
+
+        // Kelime uzunluğu > 1 olduğunda geçerli kelimeyi ekle
+        if (word.length > 1 && validateWord(word)) {  // Kelime en az 2 harf olmalı
+          foundWords.push({ word, coords });
+        }
       });
     });
 
-    // 5) Geçerli kelimeleri filtrele ve puanla
+    // Bulunan kelimeleri yazdır
+    console.log("Bulunan Kelimeler:", foundWords);
+
+    // 5) Geçersiz kelimeler varsa hata mesajı
+    for (const { word } of foundWords) {
+      if (!validateWord(word)) {  // Eğer kelime geçerli değilse
+        // Geçersiz kelime bulundu, tahtadan geri al
+        placed.forEach(({ x, y }) => {
+          game.board[x][y] = '';  // Yerleştirilen kelimeyi geri al
+        });
+        return res.status(400).json({ message: `Geçersiz kelime oluşturuluyor: ${word}` });
+      }
+    }
+
+    // 6) Geçerli kelimeleri filtrele ve puanla
     let totalPoints = 0;
     const validWords = [];
-    for (const json of foundSet) {
-      const { word, coords } = JSON.parse(json);
-
-      // Kelimeyi validate et
+    for (const { word, coords } of foundWords) {
       if (validateWord(word)) {
         let wordPoints = 0;
 
@@ -128,7 +114,7 @@ async function createMove(req, res) {
       }
     }
 
-    // 6) Move kaydet ve oyunu güncelle
+    // 7) Move kaydet ve oyunu güncelle
     const move = await Move.create({
       gameId: game._id,
       playerId,
@@ -137,7 +123,7 @@ async function createMove(req, res) {
       totalPoints
     });
 
-    // 7) Game skorunu ve hareket geçmişini güncelle
+    // 8) Game skorunu ve hareket geçmişini güncelle
     game.score += totalPoints;
 
     // Game.moves'i kontrol et
@@ -148,11 +134,12 @@ async function createMove(req, res) {
     game.moves.push({ playerId, placed });
     await game.save();
 
-    // 8) Yanıt dön
+    // 9) Yanıt dön
     return res.status(201).json({
       move,
       board: game.board,
-      score: game.score
+      score: game.score,
+      foundWords  // Bulunan kelimeleri JSON yanıtında ekleyelim
     });
 
   } catch (error) {
