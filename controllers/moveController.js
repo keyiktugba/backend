@@ -83,6 +83,8 @@ async function createMove(req, res) {
     const validWords = [];
     for (const json of foundSet) {
       const { word, coords } = JSON.parse(json);
+
+      // Kelimeyi validate et
       if (validateWord(word)) {
         let wordPoints = 0;
 
@@ -101,6 +103,9 @@ async function createMove(req, res) {
 
         totalPoints += wordPoints;
         validWords.push({ word, coords, points: wordPoints });
+      } else {
+        // Geçersiz kelime, kullanıcıyı bilgilendir
+        return res.status(400).json({ message: `Geçersiz kelime: ${word}` });
       }
     }
 
