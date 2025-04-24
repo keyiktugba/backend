@@ -71,7 +71,7 @@ async function createMove(req, res) {
         }
 
         // Kelime uzunluğu > 1 olduğunda geçerli kelimeyi ekle
-        if (word.length >= 2) {  // Kelime en az 2 harf olmalı
+        if (word.length >= 1) {  // Kelime en az 2 harf olmalı
           foundSet.add(JSON.stringify({ word, coords }));
         }
       });
@@ -125,13 +125,8 @@ async function createMove(req, res) {
     });
 
   } catch (error) {
-<<<<<<< HEAD
-    console.error("Hata Detayı:", error);  // Hata detaylarını konsola yazdır
-    return res.status(500).json({ message: 'Sunucu hatası.', error: error.message });  // Hata mesajını döndür
-=======
     console.error('Error in createMove function:', error);
     return res.status(500).json({ message: 'Sunucu hatası.', error: error.message });
->>>>>>> 55d9d4ee3d7602526beee0b7ca0bd2b5b8c9eb5b
   }
 }
 
