@@ -87,5 +87,52 @@ async function createMove(req, res) {
     return res.status(500).json({ message: 'Sunucu hatası.' });
   }
 }
+function getMovesByGame(req, res) {
+  res.send('getMovesByGame');
+}
 
-module.exports = { createMove };
+function getMovesByPlayer(req, res) {
+  res.send('getMovesByPlayer');
+}
+
+function getMoveById(req, res) {
+  res.send('getMoveById');
+}
+
+function updateMove(req, res) {
+  res.send('updateMove');
+}
+
+function getMineTriggeredMoves(req, res) {
+  res.send('getMineTriggeredMoves');
+}
+
+function getRewardEarnedMoves(req, res) {
+  res.send('getRewardEarnedMoves');
+}
+
+function getWordStats(req, res) {
+  res.send('getWordStats');
+}
+
+function getLastMoveByGame(req, res) {
+  res.send('getLastMoveByGame');
+}
+
+function deleteMove(req, res) {
+  res.send('deleteMove');
+}
+
+module.exports = {
+  createMove,
+  getMovesByGame,
+  getMovesByPlayer,
+  getMoveById,
+  updateMove,
+  getMineTriggeredMoves,
+  getRewardEarnedMoves,
+  getWordStats,
+  getLastMoveByGame,
+  deleteMove
+};
+
