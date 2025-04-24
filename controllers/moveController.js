@@ -19,8 +19,6 @@ async function createMove(req, res) {
       return res.status(404).json({ message: 'Game bulunamadı.' });
     }
 
-    console.log("Game found:", game);  // Debugging step
-
     // Eğer game.board yoksa başlat
     if (!game.board) {
       game.board = Array(15).fill().map(() => Array(15).fill(''));
@@ -51,6 +49,7 @@ async function createMove(req, res) {
 
     const foundSet = new Set();
 
+    // Komşuluk ve kelime kontrolü
     placed.forEach(({ x, y, letter }) => {
       directions.forEach(({ dx, dy }) => {
         let bx = x, by = y;
@@ -72,7 +71,7 @@ async function createMove(req, res) {
         }
 
         // Kelime uzunluğu > 1 olduğunda geçerli kelimeyi ekle
-        if (word.length >= 1) {  // Kelime en az 2 harf olmalı
+        if (word.length > 1 && validateWord(word)) {  // Kelime en az 2 harf olmalı
           foundSet.add(JSON.stringify({ word, coords }));
         }
       });
@@ -88,7 +87,7 @@ async function createMove(req, res) {
       if (validateWord(word)) {
         let wordPoints = 0;
 
-        // Her bir harfi kontrol et ve bonus taşları uygulayarak puan hesapla
+        // Her bir harfi kontrol et ve bonus taşlarını uygulayarak puan hesapla
         coords.forEach(({ x, y }) => {
           let letterPts = letterScore(game.board[x][y]);
 
@@ -122,14 +121,9 @@ async function createMove(req, res) {
     game.score += totalPoints;
 
     // Game.moves'i kontrol et
-    console.log("Before checking moves:", game.moves);  // Debugging step
-
-    // Ensure moves array is initialized
     if (!game.moves) {
       game.moves = [];  // Initialize moves if it's undefined
     }
-
-    console.log("After ensuring moves:", game.moves);  // Debugging step
 
     game.moves.push({ playerId, placed });
     await game.save();
@@ -149,4 +143,4 @@ async function createMove(req, res) {
 
 module.exports = {
   createMove,
-};
+}
