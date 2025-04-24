@@ -32,20 +32,22 @@ async function createMove(req, res) {
       }
     });
 
-    // 3) Tahtayı geçici olarak güncelle (geçici olarak yerleştir)
+    // 3) Tahtayı güncelle
     placed.forEach(({ x, y, letter }) => {
       if (inBounds(x, y)) {
         game.board[x][y] = letter;
       }
     });
 
-    // 4) Yalnızca soldan sağa ve yukarıdan aşağıya kelime tarama
+    // 4) Yatay ve dikey kelime tarama
     const directions = [
       { dx: 1, dy: 0 },  // Yatay (soldan sağa)
       { dx: 0, dy: 1 },  // Dikey (yukarıdan aşağıya)
+      { dx: -1, dy: 0 }, // Yatay (sağdan sola)
+      { dx: 0, dy: -1 }, // Dikey (aşağıdan yukarıya)
     ];
 
-    const foundWords = []; // Bulunan kelimeleri tutacağımız array
+    const foundSet = new Set();
 
     // Komşuluk ve kelime kontrolü
     placed.forEach(({ x, y, letter }) => {
@@ -61,7 +63,7 @@ async function createMove(req, res) {
         let word = '', coords = [];
         let cx = bx, cy = by;
 
-        // Yalnızca yatay ve dikey yönlerde tarama
+        // Yatay ve dikey tarama: Başlangıç noktasından itibaren devam et
         while (inBounds(cx, cy) && game.board[cx][cy] !== '') {
           word   += game.board[cx][cy];
           coords.push({ x: cx, y: cy });
@@ -69,30 +71,19 @@ async function createMove(req, res) {
         }
 
         // Kelime uzunluğu > 1 olduğunda geçerli kelimeyi ekle
-        if (word.length >= 1 && validateWord(word)) {  // Kelime en az 2 harf olmalı
-          foundWords.push({ word, coords });
+        if (word.length > 1 && validateWord(word)) {  // Kelime en az 2 harf olmalı
+          foundSet.add(JSON.stringify({ word, coords }));
         }
       });
     });
 
-    // Bulunan kelimeleri yazdır
-    console.log("Bulunan Kelimeler:", foundWords);
-
-    // 5) Geçersiz kelimeler varsa hata mesajı
-    for (const { word } of foundWords) {
-      if (!validateWord(word)) {  // Eğer kelime geçerli değilse
-        // Geçersiz kelime bulundu, tahtadan geri al
-        placed.forEach(({ x, y }) => {
-          game.board[x][y] = '';  // Yerleştirilen kelimeyi geri al
-        });
-        return res.status(400).json({ message: `Geçersiz kelime oluşturuluyor: ${word}` });
-      }
-    }
-
-    // 6) Geçerli kelimeleri filtrele ve puanla
+    // 5) Geçerli kelimeleri filtrele ve puanla
     let totalPoints = 0;
     const validWords = [];
-    for (const { word, coords } of foundWords) {
+    for (const json of foundSet) {
+      const { word, coords } = JSON.parse(json);
+
+      // Kelimeyi validate et
       if (validateWord(word)) {
         let wordPoints = 0;
 
@@ -111,10 +102,13 @@ async function createMove(req, res) {
 
         totalPoints += wordPoints;
         validWords.push({ word, coords, points: wordPoints });
+      } else {
+        // Geçersiz kelime, kullanıcıyı bilgilendir
+        return res.status(400).json({ message: `Geçersiz kelime: ${word}` });
       }
     }
 
-    // 7) Move kaydet ve oyunu güncelle
+    // 6) Move kaydet ve oyunu güncelle
     const move = await Move.create({
       gameId: game._id,
       playerId,
@@ -123,7 +117,7 @@ async function createMove(req, res) {
       totalPoints
     });
 
-    // 8) Game skorunu ve hareket geçmişini güncelle
+    // 7) Game skorunu ve hareket geçmişini güncelle
     game.score += totalPoints;
 
     // Game.moves'i kontrol et
@@ -134,12 +128,11 @@ async function createMove(req, res) {
     game.moves.push({ playerId, placed });
     await game.save();
 
-    // 9) Yanıt dön
+    // 8) Yanıt dön
     return res.status(201).json({
       move,
       board: game.board,
-      score: game.score,
-      foundWords  // Bulunan kelimeleri JSON yanıtında ekleyelim
+      score: game.score
     });
 
   } catch (error) {
@@ -150,4 +143,4 @@ async function createMove(req, res) {
 
 module.exports = {
   createMove,
-};
+}
