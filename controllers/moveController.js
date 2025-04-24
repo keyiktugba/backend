@@ -1,6 +1,6 @@
+const { validateWord, letterScore, getTileBonus, applyBonus } = require('../utils/wordUtils');
 const Move = require('../models/Move');
 const Game = require('../models/Game');
-const { validateWord, letterScore } = require('../utils/wordUtils');
 
 // Tahta sınır kontrolü
 function inBounds(x, y) {
@@ -21,29 +21,38 @@ async function createMove(req, res) {
       if (inBounds(x, y)) game.board[x][y] = letter;
     });
 
-    // 3) Kelime taraması
+    // 3) Yatay ve dikey kelime tarama
     const directions = [
-      { dx:  1, dy:  0 },
-      { dx:  0, dy:  1 }
+      { dx: 1, dy: 0 },  // Yatay (soldan sağa)
+      { dx: 0, dy: 1 },  // Dikey (yukarıdan aşağıya)
+      { dx: -1, dy: 0 }, // Yatay (sağdan sola)
+      { dx: 0, dy: -1 }, // Dikey (aşağıdan yukarıya)
     ];
+
     const foundSet = new Set();
 
-    placed.forEach(({ x, y }) => {
+    placed.forEach(({ x, y, letter }) => {
       directions.forEach(({ dx, dy }) => {
-        // Başlangıç noktasını bul (geriye boşluk/Past cell)
         let bx = x, by = y;
+
+        // Taramanın başladığı noktayı bul: boş hücreleri geç
         while (inBounds(bx - dx, by - dy) && game.board[bx - dx][by - dy] !== '') {
           bx -= dx; by -= dy;
         }
-        // İleri tara, kelimeyi ve koordinatları topla
+
+        // Kelimeyi oluştur ve koordinatları topla
         let word = '', coords = [];
         let cx = bx, cy = by;
+
+        // Yatay ve dikey tarama: Başlangıç noktasından itibaren devam et
         while (inBounds(cx, cy) && game.board[cx][cy] !== '') {
           word   += game.board[cx][cy];
           coords.push({ x: cx, y: cy });
           cx += dx; cy += dy;
         }
-        if (word.length > 1) {
+
+        // Kelime uzunluğu > 1 olduğunda geçerli kelimeyi ekle
+        if (word.length >= 1) {
           foundSet.add(JSON.stringify({ word, coords }));
         }
       });
@@ -55,13 +64,27 @@ async function createMove(req, res) {
     for (const json of foundSet) {
       const { word, coords } = JSON.parse(json);
       if (validateWord(word)) {
-        const pts = coords.reduce((sum, { x, y }) => sum + letterScore(game.board[x][y]), 0);
-        totalPoints += pts;
-        validWords.push({ word, coords, points: pts });
+        let wordPoints = 0;
+        
+        // Her bir harfi kontrol et ve bonus taşları uygulayarak puan hesapla
+        coords.forEach(({ x, y }) => {
+          let letterPts = letterScore(game.board[x][y]);
+
+          // Bonus taşlarını kontrol et ve puanı uygula
+          const bonusType = getTileBonus(x, y);
+          if (bonusType) {
+            letterPts = applyBonus(letterPts, bonusType);  // Bonus türüne göre puanı uygula
+          }
+
+          wordPoints += letterPts;
+        });
+
+        totalPoints += wordPoints;
+        validWords.push({ word, coords, points: wordPoints });
       }
     }
 
-    // 5) Move kaydet
+    // 5) Move kaydet ve oyunu güncelle
     const move = await Move.create({
       gameId,
       playerId,
@@ -87,52 +110,7 @@ async function createMove(req, res) {
     return res.status(500).json({ message: 'Sunucu hatası.' });
   }
 }
-function getMovesByGame(req, res) {
-  res.send('getMovesByGame');
-}
-
-function getMovesByPlayer(req, res) {
-  res.send('getMovesByPlayer');
-}
-
-function getMoveById(req, res) {
-  res.send('getMoveById');
-}
-
-function updateMove(req, res) {
-  res.send('updateMove');
-}
-
-function getMineTriggeredMoves(req, res) {
-  res.send('getMineTriggeredMoves');
-}
-
-function getRewardEarnedMoves(req, res) {
-  res.send('getRewardEarnedMoves');
-}
-
-function getWordStats(req, res) {
-  res.send('getWordStats');
-}
-
-function getLastMoveByGame(req, res) {
-  res.send('getLastMoveByGame');
-}
-
-function deleteMove(req, res) {
-  res.send('deleteMove');
-}
 
 module.exports = {
   createMove,
-  getMovesByGame,
-  getMovesByPlayer,
-  getMoveById,
-  updateMove,
-  getMineTriggeredMoves,
-  getRewardEarnedMoves,
-  getWordStats,
-  getLastMoveByGame,
-  deleteMove
 };
-
