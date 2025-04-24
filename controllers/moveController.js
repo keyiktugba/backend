@@ -7,6 +7,46 @@ function inBounds(x, y) {
   return x >= 0 && x < 15 && y >= 0 && y < 15;
 }
 
+// Komşuluk kontrolü: Yalnızca geçerli sınırlar içinde kalan hücrelerde geçerli kelimeler arar
+function getNeighboringWords(x, y, game) {
+  const directions = [
+    { dx: 1, dy: 0 },  // Yatay (soldan sağa)
+    { dx: 0, dy: 1 },  // Dikey (yukarıdan aşağıya)
+    { dx: -1, dy: 0 }, // Yatay (sağdan sola)
+    { dx: 0, dy: -1 }, // Dikey (aşağıdan yukarıya)
+  ];
+
+  const foundWords = [];
+
+  // Tüm yönlerdeki kelimeleri bul
+  directions.forEach(({ dx, dy }) => {
+    let bx = x, by = y;
+
+    // Taramanın başladığı noktayı bul: boş hücreleri geç
+    while (inBounds(bx - dx, by - dy) && game.board[bx - dx][by - dy] !== '') {
+      bx -= dx; by -= dy;
+    }
+
+    // Kelimeyi oluştur ve koordinatları topla
+    let word = '', coords = [];
+    let cx = bx, cy = by;
+
+    // Yatay ve dikey tarama: Başlangıç noktasından itibaren devam et
+    while (inBounds(cx, cy) && game.board[cx][cy] !== '') {
+      word   += game.board[cx][cy];
+      coords.push({ x: cx, y: cy });
+      cx += dx; cy += dy;
+    }
+
+    // Kelimeyi geçerli olup olmadığını kontrol et
+    if (word.length > 1) {
+      foundWords.push({ word, coords });
+    }
+  });
+
+  return foundWords;
+}
+
 // Hamle işleme
 async function createMove(req, res) {
   try {
@@ -39,59 +79,28 @@ async function createMove(req, res) {
       }
     });
 
-    // 4) Yatay ve dikey kelime tarama
-    const directions = [
-      { dx: 1, dy: 0 },  // Yatay (soldan sağa)
-      { dx: 0, dy: 1 },  // Dikey (yukarıdan aşağıya)
-      { dx: -1, dy: 0 }, // Yatay (sağdan sola)
-      { dx: 0, dy: -1 }, // Dikey (aşağıdan yukarıya)
-    ];
-
+    // 4) Komşu kelimeleri kontrol et
     const foundSet = new Set();
 
-    // Komşuluk ve kelime kontrolü
-    placed.forEach(({ x, y, letter }) => {
-      directions.forEach(({ dx, dy }) => {
-        let bx = x, by = y;
+    placed.forEach(({ x, y }) => {
+      const neighboringWords = getNeighboringWords(x, y, game);
 
-        // Taramanın başladığı noktayı bul: boş hücreleri geç
-        while (inBounds(bx - dx, by - dy) && game.board[bx - dx][by - dy] !== '') {
-          bx -= dx; by -= dy;
+      neighboringWords.forEach(({ word, coords }) => {
+        // Geçersiz kelimeleri kontrol et
+        if (!validateWord(word)) {
+          placed.forEach(({ x, y }) => {
+            game.board[x][y] = '';  // Yerleştirilen kelimeyi geri al
+          });
+          return res.status(400).json({
+            message: `Geçersiz kelime oluşturuluyor: ${word}`
+          });
         }
 
-        // Kelimeyi oluştur ve koordinatları topla
-        let word = '', coords = [];
-        let cx = bx, cy = by;
-
-        // Yatay ve dikey tarama: Başlangıç noktasından itibaren devam et
-        while (inBounds(cx, cy) && game.board[cx][cy] !== '') {
-          word   += game.board[cx][cy];
-          coords.push({ x: cx, y: cy });
-          cx += dx; cy += dy;
-        }
-
-        // Kelime uzunluğu > 1 olduğunda bloğu ekle (geçerli/invalid ayırmadan)
-        if (word.length > 1) {
-          foundSet.add(JSON.stringify({ word, coords }));
-        }
+        foundSet.add(JSON.stringify({ word, coords }));
       });
     });
 
-    // 5) Geçersiz kelimeler varsa hata mesajı
-    for (const json of foundSet) {
-      const { word } = JSON.parse(json);
-      if (!validateWord(word)) {
-        // Geçersiz blok bulundu: hamleyi geri al
-        placed.forEach(({ x, y }) => {
-          game.board[x][y] = '';
-        });
-        return res.status(400).json({
-          message: `Geçersiz komşu kelime: ${word}`
-        });
-      }
-    }
-
-    // 6) Geçerli kelimeleri filtrele ve puanla
+    // 5) Geçerli kelimeleri filtrele ve puanla
     let totalPoints = 0;
     const validWords = [];
     for (const json of foundSet) {
@@ -119,7 +128,7 @@ async function createMove(req, res) {
       }
     }
 
-    // 7) Move kaydet ve oyunu güncelle
+    // 6) Move kaydet ve oyunu güncelle
     const move = await Move.create({
       gameId: game._id,
       playerId,
@@ -128,7 +137,7 @@ async function createMove(req, res) {
       totalPoints
     });
 
-    // 8) Game skorunu ve hareket geçmişini güncelle
+    // 7) Game skorunu ve hareket geçmişini güncelle
     game.score += totalPoints;
 
     // Game.moves'i kontrol et
@@ -139,7 +148,7 @@ async function createMove(req, res) {
     game.moves.push({ playerId, placed });
     await game.save();
 
-    // 9) Yanıt dön
+    // 8) Yanıt dön
     return res.status(201).json({
       move,
       board: game.board,
