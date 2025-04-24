@@ -75,6 +75,7 @@ exports.getActiveGames = async (req, res) => {
   }
 };
 
+
 // Biten Oyunları Getirme
 exports.getCompletedGames = async (req, res) => {
   try {
