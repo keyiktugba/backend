@@ -1,3 +1,4 @@
+//gameController.js
 const Game = require('../models/Game');
 const User = require('../models/User');
 
@@ -63,6 +64,20 @@ exports.joinOrCreateGame = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+exports.getGameById = async (req, res) => {
+  try {
+    const game = await Game.findById(req.params.id);
+    if (!game) {
+      return res.status(404).json({ message: 'Oyun bulunamadı' });
+    }
+    res.json(game);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
 
 // Aktif Oyunları Getirme
 exports.getActiveGames = async (req, res) => {

@@ -1,10 +1,12 @@
+//gameRoutes.js
 const express = require('express');
 const router = express.Router();
 const {
   joinOrCreateGame,
   getActiveGames,
   getCompletedGames,
-  getAllGames
+  getAllGames,
+  getGameById
 } = require('../controllers/gameController');
 
 // Oyuna katılma ya da yeni oyun oluşturma
@@ -18,5 +20,8 @@ router.get('/completed', getCompletedGames);
 
 // Tüm oyunları getirme
 router.get('/all', getAllGames);
+
+// Tekil oyun bilgisi getirme (gameId ile)
+router.get('/:id', getGameById);
 
 module.exports = router;
