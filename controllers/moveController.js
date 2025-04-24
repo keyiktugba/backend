@@ -140,6 +140,13 @@ async function createMove(req, res) {
     }
 
     game.moves.push({ playerId, placed });
+
+    // Valid kelimeleri tüm oyuna ekle
+    if (!game.allValidWords) {
+      game.allValidWords = [];
+    }
+    game.allValidWords.push(...validWords);
+
     await game.save();
 
     // 10) Yanıt dön

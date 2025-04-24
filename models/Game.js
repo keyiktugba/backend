@@ -31,6 +31,10 @@ const gameSchema = new Schema({
     type: Boolean,
     default: false
   },
+  allValidWords: {
+    type: [validWordSchema],
+    default: []
+  },
   // Sıra hangi oyuncuda
   currentTurn: {
     type: Schema.Types.ObjectId,
