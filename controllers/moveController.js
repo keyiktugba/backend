@@ -32,7 +32,7 @@ async function createMove(req, res) {
       }
     });
 
-    // 3) Tahtayı güncelle
+    // 3) Tahtayı geçici olarak güncelle (geçici olarak yerleştir)
     placed.forEach(({ x, y, letter }) => {
       if (inBounds(x, y)) {
         game.board[x][y] = letter;
@@ -77,7 +77,19 @@ async function createMove(req, res) {
       });
     });
 
-    // 5) Geçerli kelimeleri filtrele ve puanla
+    // 5) Geçersiz kelimeler varsa hata mesajı
+    for (const json of foundSet) {
+      const { word } = JSON.parse(json);
+      if (!validateWord(word)) {  // Eğer kelime geçerli değilse
+        // Geçersiz kelime bulundu, tahtadan geri al
+        placed.forEach(({ x, y }) => {
+          game.board[x][y] = '';  // Yerleştirilen kelimeyi geri al
+        });
+        return res.status(400).json({ message: `Geçersiz kelime oluşturuluyor: ${word}` });
+      }
+    }
+
+    // 6) Geçerli kelimeleri filtrele ve puanla
     let totalPoints = 0;
     const validWords = [];
     for (const json of foundSet) {
@@ -102,13 +114,10 @@ async function createMove(req, res) {
 
         totalPoints += wordPoints;
         validWords.push({ word, coords, points: wordPoints });
-      } else {
-        // Geçersiz kelime, kullanıcıyı bilgilendir
-        return res.status(400).json({ message: `Geçersiz kelime: ${word}` });
       }
     }
 
-    // 6) Move kaydet ve oyunu güncelle
+    // 7) Move kaydet ve oyunu güncelle
     const move = await Move.create({
       gameId: game._id,
       playerId,
@@ -117,7 +126,7 @@ async function createMove(req, res) {
       totalPoints
     });
 
-    // 7) Game skorunu ve hareket geçmişini güncelle
+    // 8) Game skorunu ve hareket geçmişini güncelle
     game.score += totalPoints;
 
     // Game.moves'i kontrol et
@@ -128,7 +137,7 @@ async function createMove(req, res) {
     game.moves.push({ playerId, placed });
     await game.save();
 
-    // 8) Yanıt dön
+    // 9) Yanıt dön
     return res.status(201).json({
       move,
       board: game.board,
@@ -143,4 +152,4 @@ async function createMove(req, res) {
 
 module.exports = {
   createMove,
-}
+};
