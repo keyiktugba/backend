@@ -41,9 +41,16 @@ const bonusTiles = {
 // 4. Sözlük kontrolü
 //    Verilen kelimeyi (string) sözlükte arar. Büyük/küçük harf duyarsız.
 //    true dönerse kelime geçerli.
+// Kelime listesini Set'e dönüştür
+const kelimeSeti = new Set(kelimeListesi.map(word => word.toLowerCase()));
+
+// validateWord fonksiyonu
 function validateWord(word) {
+  // Eğer kelime string değilse, geçersizdir
   if (typeof word !== 'string') return false;
-  return kelimeListesi.includes(word.toLowerCase());
+
+  // Kelimeyi küçük harfe çevir ve kelime setinde olup olmadığını kontrol et
+  return kelimeSeti.has(word.toLowerCase());
 }
 
 // 5. Harf bazlı puan döndürme
