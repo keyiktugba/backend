@@ -20,8 +20,13 @@ async function createMove(req, res) {
       return res.status(404).json({ message: 'Game bulunamadı.' });
     }
 
+    // Eğer game.board yoksa başlat
+    if (!game.board) {
+      game.board = Array(15).fill().map(() => Array(15).fill(''));
+    }
+
     // 2) Geçersiz koordinatlar kontrolü
-    placed.forEach(({ x, y, letter }) => {
+    placed.forEach(({ x, y }) => {
       if (!inBounds(x, y)) {
         console.error(`Invalid coordinates: x: ${x}, y: ${y}`);
         return res.status(400).json({ message: `Geçersiz koordinatlar: x: ${x}, y: ${y}` });
@@ -30,7 +35,9 @@ async function createMove(req, res) {
 
     // 3) Tahtayı güncelle
     placed.forEach(({ x, y, letter }) => {
-      if (inBounds(x, y)) game.board[x][y] = letter;
+      if (inBounds(x, y)) {
+        game.board[x][y] = letter;
+      }
     });
 
     // 4) Yatay ve dikey kelime tarama
