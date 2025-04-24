@@ -19,6 +19,8 @@ async function createMove(req, res) {
       return res.status(404).json({ message: 'Game bulunamadı.' });
     }
 
+    console.log("Game found:", game);  // Debugging step
+
     // Eğer game.board yoksa başlat
     if (!game.board) {
       game.board = Array(15).fill().map(() => Array(15).fill(''));
@@ -114,10 +116,15 @@ async function createMove(req, res) {
     // 7) Game skorunu ve hareket geçmişini güncelle
     game.score += totalPoints;
 
+    // Game.moves'i kontrol et
+    console.log("Before checking moves:", game.moves);  // Debugging step
+
     // Ensure moves array is initialized
     if (!game.moves) {
       game.moves = [];  // Initialize moves if it's undefined
     }
+
+    console.log("After ensuring moves:", game.moves);  // Debugging step
 
     game.moves.push({ playerId, placed });
     await game.save();
