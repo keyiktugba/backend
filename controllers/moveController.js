@@ -69,21 +69,18 @@ async function createMove(req, res) {
         }
 
         // Kelime uzunluğu > 1 olduğunda geçerli kelimeyi ekle
-        if (word.length > 1 && validateWord(word)) {  // Kelime en az 2 harf olmalı
+        if (word.length > 1) {
           foundWords.push({ word, coords });
         }
       });
     });
-
-    // Bulunan kelimeleri yazdır
-    console.log("Bulunan Kelimeler:", foundWords);
 
     // 5) Geçersiz kelimeler varsa hata mesajı
     for (const { word } of foundWords) {
       if (!validateWord(word)) {  // Eğer kelime geçerli değilse
         // Geçersiz kelime bulundu, tahtadan geri al
         placed.forEach(({ x, y }) => {
-          game.board[x][y] = '';  // Yerleştirilen kelimeyi geri al
+          game.board[x][y] = '';  // Yerleştirilen harfleri geri al
         });
         return res.status(400).json({ message: `Geçersiz kelime oluşturuluyor: ${word}` });
       }
