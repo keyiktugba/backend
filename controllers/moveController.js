@@ -70,8 +70,8 @@ async function createMove(req, res) {
           cx += dx; cy += dy;
         }
 
-        // Kelime uzunluğu > 1 olduğunda geçerli kelimeyi ekle
-        if (word.length > 1 && validateWord(word)) {  // Kelime en az 2 harf olmalı
+        // Kelime uzunluğu > 1 olduğunda bloğu ekle (geçerli/invalid ayırmadan)
+        if (word.length > 1) {
           foundSet.add(JSON.stringify({ word, coords }));
         }
       });
@@ -80,12 +80,14 @@ async function createMove(req, res) {
     // 5) Geçersiz kelimeler varsa hata mesajı
     for (const json of foundSet) {
       const { word } = JSON.parse(json);
-      if (!validateWord(word)) {  // Eğer kelime geçerli değilse
-        // Geçersiz kelime bulundu, tahtadan geri al
+      if (!validateWord(word)) {
+        // Geçersiz blok bulundu: hamleyi geri al
         placed.forEach(({ x, y }) => {
-          game.board[x][y] = '';  // Yerleştirilen kelimeyi geri al
+          game.board[x][y] = '';
         });
-        return res.status(400).json({ message: `Geçersiz kelime oluşturuluyor: ${word}` });
+        return res.status(400).json({
+          message: `Geçersiz komşu kelime: ${word}`
+        });
       }
     }
 
