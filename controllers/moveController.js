@@ -69,7 +69,7 @@ async function createMove(req, res) {
         }
 
         // Kelime uzunluğu > 1 olduğunda geçerli kelimeyi ekle
-        if (word.length > 1 && validateWord(word)) {  // Kelime en az 2 harf olmalı
+        if (word.length >= 1 && validateWord(word)) {  // Kelime en az 2 harf olmalı
           foundWords.push({ word, coords });
         }
       });
