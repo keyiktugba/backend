@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const moveController = require('../controllers/moveController');
+const {createMove} = require('../controllers/moveController');
 
 // Hamle işlemleri
-router.post('/createMove', moveController.createMove);
+router.post('/createMove', createMove);
 
 module.exports = router;
