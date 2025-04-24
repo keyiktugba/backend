@@ -66,12 +66,12 @@ async function createMove(req, res) {
     const foundWords = []; // Bulunan kelimeleri tutacağımız array
 
     // Komşuluk ve kelime kontrolü
-    placed.forEach(({ x, y, letter }) => {
+    placed.forEach(({ x, y }) => {
       directions.forEach(({ dx, dy }) => {
         let bx = x, by = y;
 
         // Taramanın başladığı noktayı bul: boş hücreleri geç
-        while (inBounds(bx - dx, by - dy) && game.board[bx - dx][by - dy] !== '') {
+        while (inBounds(bx - dx, by -dy) && game.board[bx - dx][by - dy] !== '') {
           bx -= dx; by -= dy;
         }
 
@@ -79,25 +79,24 @@ async function createMove(req, res) {
         let word = '', coords = [];
         let cx = bx, cy = by;
 
-        // Yalnızca yatay ve dikey yönlerde tarama
         while (inBounds(cx, cy) && game.board[cx][cy] !== '') {
-          word   += game.board[cx][cy];
+          word += game.board[cx][cy];
           coords.push({ x: cx, y: cy });
           cx += dx; cy += dy;
         }
 
-        // Kelime uzunluğu > 1 olduğunda geçerli kelimeyi ekle
         if (word.length > 1) {
           foundWords.push({ word, coords });
         }
       });
     });
 
-    // 7) Geçersiz kelime kontrolü
-    for (const { word } of foundWords) {
+    // 7) Geçersiz kelime kontrolü: Hem yerleştirilen kelimenin, hem de etrafındaki komşulukları kontrol et
+    for (const { word, coords } of foundWords) {
       if (!validateWord(word)) {
+        // Geçersiz kelime bulundu, tahtadan geri al
         placed.forEach(({ x, y }) => {
-          game.board[x][y] = '';
+          game.board[x][y] = '';  // Yerleştirilen harfleri geri al
         });
         return res.status(400).json({ message: `Geçersiz kelime oluşturuluyor: ${word}` });
       }
