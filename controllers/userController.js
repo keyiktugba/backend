@@ -31,6 +31,7 @@ exports.registerUser = async (req, res) => {
       password_hash: password
     });
 
+    console.log('kullanıcı oluşturuldu');
     res.status(201).json({
       _id: newUser._id,
       username: newUser.username,
