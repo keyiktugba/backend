@@ -80,10 +80,18 @@ exports.getGameById = async (req, res) => {
 };
 
 
-// Aktif Oyunları Getirme
+// Kullanıcının aktif oyunlarını getirme
 exports.getActiveGames = async (req, res) => {
   try {
-    const activeGames = await Game.find({ isActive: true });
+    const { userId } = req.query; // userId'yi query'den alıyoruz
+
+    const activeGames = await Game.find({ 
+      isActive: true,
+      players: userId
+    })
+    .populate('players', 'username') // sadece username bilgisini getir
+    .populate('currentTurn', 'username'); // sıra kimde bilgisini de getir
+
     res.json(activeGames);
   } catch (error) {
     console.error(error);
@@ -92,10 +100,18 @@ exports.getActiveGames = async (req, res) => {
 };
 
 
-// Biten Oyunları Getirme
+// Kullanıcının biten oyunlarını getirme
 exports.getCompletedGames = async (req, res) => {
   try {
-    const completedGames = await Game.find({ endedAt: { $ne: null } });
+    const { userId } = req.query; // userId'yi query'den alıyoruz
+
+    const completedGames = await Game.find({
+      endedAt: { $ne: null },
+      players: userId
+    })
+    .populate('players', 'username')
+    .populate('currentTurn', 'username');
+
     res.json(completedGames);
   } catch (error) {
     console.error(error);
