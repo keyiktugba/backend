@@ -82,7 +82,8 @@ exports.getUserProfile = async (req, res) => {
           email: user.email,
           points: user.genel_puan,
           gamesPlayed: user.toplam_oyun,
-          gamesWon: user.kazanilan_oyun
+          gamesWon: user.kazanilan_oyun,
+          successRate: user.basari_yuzdesi
         });
       } else {
         res.status(404).json({ message: 'Kullanıcı bulunamadı' });
