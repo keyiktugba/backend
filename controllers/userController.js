@@ -1,3 +1,5 @@
+//controllers/userController.js
+
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
@@ -10,96 +12,96 @@ const generateToken = (id) => {
   });
 };
 
-// Kullanıcı kaydı
+// User registration
 exports.registerUser = async (req, res) => {
-    try {
-      const { kullanici_adi, email, sifre } = req.body;
-  
-      // E-posta zaten var mı kontrol et
-      const userExists = await User.findOne({ email });
-      if (userExists) {
-        return res.status(400).json({ message: 'Bu email adresi zaten kullanılıyor' });
-      }
-  
-      // Yeni kullanıcı oluştur
-      const yeniKullanici = await User.create({
-        kullanici_adi,
-        email,
-        sifre_hash: sifre
-      });
-  
-      res.status(201).json({
-        _id: yeniKullanici._id,
-        kullanici_adi: yeniKullanici.kullanici_adi,
-        email: yeniKullanici.email,
-        genel_puan: yeniKullanici.genel_puan,
-        token: generateToken(yeniKullanici._id)
-      });
-    } catch (error) {
-      res.status(500).json({ message: error.message });
-    }
-  };  
+  try {
+    const { username, email, password } = req.body;
 
-// Kullanıcı girişi
+    // Check if the email is already in use
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      return res.status(400).json({ message: 'This email address is already in use' });
+    }
+
+    // Create a new user
+    const newUser = await User.create({
+      username,
+      email,
+      password_hash: password
+    });
+
+    res.status(201).json({
+      _id: newUser._id,
+      username: newUser.username,
+      email: newUser.email,
+      total_points: newUser.total_points,
+      token: generateToken(newUser._id)
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// User login
 exports.loginUser = async (req, res) => {
-    try {
-      const { email, sifre } = req.body;
-  
-      // E-posta ile kullanıcıyı bul
-      const user = await User.findOne({ email });
-      if (!user) {
-        return res.status(401).json({ message: 'Geçersiz email veya şifre' });
-      }
-  
-      // Şifreyi kontrol et
-      const isMatch = await user.matchPassword(sifre);
-      if (!isMatch) {
-        return res.status(401).json({ message: 'Geçersiz email veya şifre' });
-      }
-  
+  try {
+    const { email, password } = req.body;
+
+    // Find the user by email
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid email or password' });
+    }
+
+    // Check the password
+    const isMatch = await user.matchPassword(password);
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Invalid email or password' });
+    }
+
+    res.json({
+      _id: user._id,
+      username: user.username,
+      email: user.email,
+      total_points: user.total_points,
+      token: generateToken(user._id)
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Get user profile
+exports.getUserProfile = async (req, res) => {
+  try {
+    const userId = req.query.id;
+    const user = await User.findById(userId);
+
+    if (user) {
       res.json({
         _id: user._id,
-        kullanici_adi: user.kullanici_adi,
+        username: user.username,
         email: user.email,
-        genel_puan: user.genel_puan,
-        token: generateToken(user._id)
+        total_points: user.total_points,
+        games_played: user.games_played,
+        games_won: user.games_won,
+        success_rate: user.success_rate
       });
-    } catch (error) {
-      res.status(500).json({ message: error.message });
+    } else {
+      res.status(404).json({ message: 'User not found' });
     }
-  };
-  
-// Kullanıcı profilini getir
-exports.getUserProfile = async (req, res) => {
-    try {
-      const userId = req.query.id;
-      const user = await User.findById(userId);
-      
-      if (user) {
-        res.json({
-          _id: user._id,
-          username: user.kullanici_adi,
-          email: user.email,
-          points: user.genel_puan,
-          gamesPlayed: user.toplam_oyun,
-          gamesWon: user.kazanilan_oyun,
-          successRate: user.basari_yuzdesi
-        });
-      } else {
-        res.status(404).json({ message: 'Kullanıcı bulunamadı' });
-      }
-    } catch (error) {
-      res.status(500).json({ message: error.message });
-    }
-  };
-  
-// En yüksek puanlı kullanıcıları getir
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Get leaderboard (top users by points)
 exports.getLeaderboard = async (req, res) => {
-    try {
-      const users = await User.find().sort({ genel_puan: -1 }).limit(10).select('kullanici_adi genel_puan toplam_oyun kazanilan_oyun');
-      res.json(users);
-    } catch (error) {
-      res.status(500).json({ message: error.message });
-    }
-  };
-  
+  try {
+    const users = await User.find().sort({ total_points: -1 }).limit(10)
+      .select('username total_points games_played games_won');
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

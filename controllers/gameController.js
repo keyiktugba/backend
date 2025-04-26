@@ -1,61 +1,57 @@
-//gameController.js
+//controllers/gameController.js
 const Game = require('../models/Game');
 const User = require('../models/User');
 
 exports.joinOrCreateGame = async (req, res) => {
   try {
     const { userId, type } = req.body;
-    
-    // 1) Kullanıcı kontrolü
-    const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ message: 'Kullanıcı bulunamadı' });
 
-    // 2) Bekleyen bir oyun var mı? (tek oyunculu, başlamamış)
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
     let game = await Game.findOne({ 
       isActive: false, 
       players: { $size: 1 },
-      type: type // Burada type parametresini de kontrol ediyoruz
+      type: type
     });
 
     if (game) {
-      // 3a) Eğer varsa: Oyuncuyu ekle, oyunu başlat
       game.players.push(userId);
       game.isActive = true;
       game.startedAt = Date.now();
-      game.currentTurn = game.players[0]; // İlk oyuncu başlasın
-      game.endedAt = null;  // Oyun bitişi başlangıçta null olmalı
+      game.currentTurn = game.players[0];
+      game.endedAt = null;
       await game.save();
 
       return res.json({
-        message: 'Oyuna katıldınız, oyun başladı',
+        message: 'Joined the game, game started',
         gameId: game._id,
         players: game.players,
         type: game.type,
         startedAt: game.startedAt,
-        endedAt: game.endedAt,  // Bitiş zamanı
+        endedAt: game.endedAt,
         isActive: game.isActive,
         currentTurn: game.currentTurn
       });
     } else {
-      // 3b) Bekleyen oyun yoksa: Yeni oyun oluştur
       game = new Game({
         players: [userId],
         type,
-        isActive: false,      // Diğer oyuncu bekleniyor
+        isActive: false,
         startedAt: Date.now(),
-        currentTurn: userId,  // İlk oyuncu sıra sahibi (Ama oyun başlamadı)
-        endedAt: null         // Oyun bitişi başlangıçta null
+        currentTurn: userId,
+        endedAt: null
       });
 
       await game.save();
 
       return res.status(201).json({
-        message: 'Yeni oyun oluşturuldu, diğer oyuncuyu bekleniyor',
+        message: 'New game created, waiting for another player',
         gameId: game._id,
         players: game.players,
         type: game.type,
         startedAt: game.startedAt,
-        endedAt: game.endedAt,    // Bitiş zamanı
+        endedAt: game.endedAt,
         isActive: game.isActive,
         currentTurn: game.currentTurn
       });
@@ -70,7 +66,7 @@ exports.getGameById = async (req, res) => {
   try {
     const game = await Game.findById(req.params.id);
     if (!game) {
-      return res.status(404).json({ message: 'Oyun bulunamadı' });
+      return res.status(404).json({ message: 'Game not found' });
     }
     res.json(game);
   } catch (error) {
@@ -79,18 +75,16 @@ exports.getGameById = async (req, res) => {
   }
 };
 
-
-// Kullanıcının aktif oyunlarını getirme
 exports.getActiveGames = async (req, res) => {
   try {
-    const { userId } = req.query; // userId'yi query'den alıyoruz
+    const { userId } = req.query;
 
-    const activeGames = await Game.find({ 
+    const activeGames = await Game.find({
       isActive: true,
       players: userId
     })
-    .populate('players', 'username') // sadece username bilgisini getir
-    .populate('currentTurn', 'username'); // sıra kimde bilgisini de getir
+    .populate('players', 'username')
+    .populate('currentTurn', 'username');
 
     res.json(activeGames);
   } catch (error) {
@@ -99,11 +93,9 @@ exports.getActiveGames = async (req, res) => {
   }
 };
 
-
-// Kullanıcının biten oyunlarını getirme
 exports.getCompletedGames = async (req, res) => {
   try {
-    const { userId } = req.query; // userId'yi query'den alıyoruz
+    const { userId } = req.query;
 
     const completedGames = await Game.find({
       endedAt: { $ne: null },
@@ -119,7 +111,6 @@ exports.getCompletedGames = async (req, res) => {
   }
 };
 
-// Tüm Oyunları Getirme
 exports.getAllGames = async (req, res) => {
   try {
     const allGames = await Game.find();

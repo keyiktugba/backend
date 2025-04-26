@@ -1,48 +1,49 @@
+//model/User.js
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
-  kullanici_adi: {
+  username: {
     type: String,
-    required: [true, 'Kullanıcı adı zorunludur'],
+    required: [true, 'Username is required'],
     unique: true,
     trim: true
   },
   email: {
     type: String,
-    required: [true, 'E-posta adresi zorunludur'],
+    required: [true, 'Email address is required'],
     unique: true,
     match: [
       /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
-      'Geçerli bir e-posta adresi giriniz'
+      'Please enter a valid email address'
     ]
   },
-  sifre_hash: {
+  password_hash: {
     type: String,
-    required: [true, 'Şifre zorunludur'],
+    required: [true, 'Password is required'],
     minlength: 8
   },
-  genel_puan: {
+  total_points: {
     type: Number,
     default: 0
   },
-  kazanilan_oyun: {
+  games_won: {
     type: Number,
     default: 0
   },
-  toplam_oyun: {
+  games_played: {
     type: Number,
     default: 0
   },
-  basari_yuzdesi: {
+  success_rate: {
     type: Number,
     default: 0
   },
-  olusturma_tarihi: {
+  created_at: {
     type: Date,
     default: Date.now
   },
-  son_giris: {
+  last_login: {
     type: Date,
     default: Date.now
   }
@@ -50,31 +51,30 @@ const userSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Şifre hashleme middleware
+// Password hashing middleware
 userSchema.pre('save', async function(next) {
-  if (!this.isModified('sifre_hash')) {
+  if (!this.isModified('password_hash')) {
     next();
   }
-  
+
   const salt = await bcrypt.genSalt(10);
-  this.sifre_hash = await bcrypt.hash(this.sifre_hash, salt);
+  this.password_hash = await bcrypt.hash(this.password_hash, salt);
 });
 
-// Şifre kontrolü için metod
+// Method to check password
 userSchema.methods.matchPassword = async function(enteredPassword) {
-  return await bcrypt.compare(enteredPassword, this.sifre_hash);
+  return await bcrypt.compare(enteredPassword, this.password_hash);
 };
 
-// Başarı yüzdesini hesaplama
+// Calculate success rate
 userSchema.pre('save', function(next) {
-  if (this.toplam_oyun > 0) {
-    this.basari_yuzdesi = (this.kazanilan_oyun / this.toplam_oyun) * 100;
+  if (this.games_played > 0) {
+    this.success_rate = (this.games_won / this.games_played) * 100;
   } else {
-    this.basari_yuzdesi = 0;
+    this.success_rate = 0;
   }
   next();
 });
-
 
 const User = mongoose.model('User', userSchema);
 
