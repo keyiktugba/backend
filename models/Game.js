@@ -41,11 +41,17 @@ const gameSchema = new Schema({
     ref: 'User',
     required: true
   },
-  scores: {
-    type: Map,
-    of: Number,
-    default: {}
-  },  
+  scores: [{
+    player: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
+    score: {
+      type: Number,
+      default: 0
+    }
+  }]   
 }, {
   timestamps: true
 });
