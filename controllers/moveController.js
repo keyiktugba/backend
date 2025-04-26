@@ -54,20 +54,36 @@ function hasAdjacentTile(board, x, y) {
     });
 }
 
-// Bir kelimenin toplam puanını hesaplar
-function calculateWordPoints(wordCoords, board) {
+// Bir kelimenin puanını bonuslarla beraber hesaplar
+function calculateWordPoints(wordCoords, board, placedPositions) {
+    let wordMultiplier = 1;
     let points = 0;
+
     for (const { x, y } of wordCoords) {
         const letter = board[y][x];
-        points += letterPoints[letter.toUpperCase()] || 0;
-        // Bonus puanlar da buraya eklenebilir (ileride)
+        const basePoint = letterPoints[letter.toUpperCase()] || 0;
+
+        let letterMultiplier = 1;
+
+        // Eğer bu harf yeni yerleştirildiyse ve bonus karesindeyse
+        if (placedPositions.has(`${x},${y}`)) {
+            const bonus = bonusTiles[`${x},${y}`];
+            if (bonus === 'DL') letterMultiplier = 2;
+            if (bonus === 'TL') letterMultiplier = 3;
+            if (bonus === 'DW') wordMultiplier *= 2;
+            if (bonus === 'TW') wordMultiplier *= 3;
+        }
+
+        points += basePoint * letterMultiplier;
     }
-    return points;
+
+    return points * wordMultiplier;
 }
 
 // 🎯 Hamle doğrulama fonksiyonu
 function validateMove(board, placedTiles, firstMove = false) {
     const tempBoard = board.map(row => [...row]);
+    const placedPositions = new Set(placedTiles.map(({ x, y }) => `${x},${y}`));
 
     for (const { x, y, letter } of placedTiles) {
         if (tempBoard[y][x]) {
@@ -79,6 +95,7 @@ function validateMove(board, placedTiles, firstMove = false) {
     let formedWords = new Set();
     let detailedWords = [];
     let hasConnection = false;
+    let touchedCenter = false;
 
     for (const { x, y } of placedTiles) {
         const horizontal = extractWordHorizontal(tempBoard, x, y);
@@ -91,13 +108,24 @@ function validateMove(board, placedTiles, firstMove = false) {
             formedWords.add(vertical.word.toLowerCase());
             detailedWords.push(vertical);
         }
+
         if (!hasConnection && hasAdjacentTile(board, x, y)) {
             hasConnection = true;
         }
+
+        if (x === 7 && y === 7) {
+            touchedCenter = true;
+        }
     }
 
-    if (!firstMove && !hasConnection) {
-        throw new Error("Önceki harflerle bağlantı yok.");
+    if (firstMove) {
+        if (!touchedCenter) {
+            throw new Error("İlk hamlede ortadaki kare (7,7) kullanılmalı.");
+        }
+    } else {
+        if (!hasConnection) {
+            throw new Error("Önceki harflerle bağlantı yok.");
+        }
     }
 
     for (const word of formedWords) {
@@ -109,7 +137,7 @@ function validateMove(board, placedTiles, firstMove = false) {
     const validWords = detailedWords.map(({ word, coords }) => ({
         word: word.toLowerCase(),
         coords,
-        points: calculateWordPoints(coords, tempBoard)
+        points: calculateWordPoints(coords, tempBoard, placedPositions)
     }));
 
     const totalPoints = validWords.reduce((sum, w) => sum + w.points, 0);
@@ -118,9 +146,7 @@ function validateMove(board, placedTiles, firstMove = false) {
 }
 
 // 🎯 Ana Controller Fonksiyonları
-
 module.exports = {
-    // Yeni bir hamle kaydeder
     async createMove(req, res) {
         try {
             const { gameId, playerId, placedTiles, boardState, firstMove } = req.body;
@@ -141,9 +167,6 @@ module.exports = {
 
             await move.save();
 
-            // Eğer istenirse burada oyunun skor güncellemesi yapılabilir
-            // await Game.findByIdAndUpdate(gameId, { $inc: { totalScore: totalPoints } });
-
             return res.status(201).json({ message: "Hamle başarıyla kaydedildi.", move });
         } catch (err) {
             console.error(err);
@@ -151,7 +174,6 @@ module.exports = {
         }
     },
 
-    // Bir oyuna ait tüm hamleleri listeler
     async getMovesByGame(req, res) {
         try {
             const { gameId } = req.params;
