@@ -1,7 +1,7 @@
 //Game.js
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
-const { validWordSchema } = require('./models/Move');
+const { validWordSchema } = require('../models/Move');
 
 const gameSchema = new Schema({
   // Oyuna katılmış oyuncular (1 veya 2 kişi)
