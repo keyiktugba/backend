@@ -81,7 +81,7 @@ exports.getActiveGames = async (req, res) => {
 
     const activeGames = await Game.find({
       isActive: true,
-      players: userId
+      players: { $in: [userId] }
     })
     .populate('players', 'username')
     .populate('currentTurn', 'username');
@@ -102,14 +102,26 @@ exports.getCompletedGames = async (req, res) => {
       players: userId
     })
     .populate('players', 'username')
-    .populate('currentTurn', 'username');
+    .populate('scores.player', 'username');
 
-    res.json(completedGames);
+    const formattedGames = completedGames.map(game => {
+      // En yüksek skoru alan oyuncuyu bul
+      const highestScore = game.scores.reduce((max, current) => current.score > max.score ? current : max, game.scores[0]);
+
+      return {
+        id: game._id,
+        gameName: `Oyun (${game.type})`, // burayı istersen daha güzel formatlayabiliriz
+        winner: highestScore?.player?.username || 'Bilinmiyor'
+      };
+    });
+
+    res.json(formattedGames);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: error.message });
   }
 };
+
 
 exports.getAllGames = async (req, res) => {
   try {
