@@ -338,6 +338,9 @@ module.exports = {
                 return res.status(404).json({ message: "Oyun bulunamadı." });
             }
 
+            game.allValidWords = [...game.allValidWords, ...validWords];
+            await game.save();
+
             const nextPlayerId = (game.currentTurn.toString() === playerId.toString())
                 ? game.players[1]._id
                 : game.players[0]._id;
@@ -356,8 +359,23 @@ module.exports = {
     async getMovesByGame(req, res) {
         try {
             const { gameId } = req.params;
+            if (!gameId) {
+                return res.status(400).json({ message: "Oyun ID'si gereklidir." });
+            }
+    
+            // Oyunu veritabanından buluyoruz
+            const game = await Game.findById(gameId).populate('players'); // Oyuncuları da populate ederek alıyoruz
+            if (!game) {
+                return res.status(404).json({ message: "Oyun bulunamadı." });
+            }
+
             const moves = await Move.find({ gameId }).sort({ createdAt: 1 });
-            return res.status(200).json(moves);
+            return res.status(200).json({
+            message: "Hamleler başarıyla alındı.",
+            gameId: game._id,
+            allValidWords: game.allValidWords, // Geçerli tüm kelimeler
+            moves, // Oyunun tüm hamleleri
+        });
         } catch (err) {
             console.error(err);
             return res.status(500).json({ message: "Hamleler alınamadı." });
