@@ -211,7 +211,6 @@ function validateWordExtension(boardState, x, y, letter, isHorizontal) {
 
 
 function validateMove(boardState, placedTiles, firstMove) {
-    const boardCopy = boardState.map(row => [...row]); // 2D deep copy
     let validWords = [];
     let totalPoints = 0;
 
@@ -225,29 +224,30 @@ function validateMove(boardState, placedTiles, firstMove) {
     // Yeni taşları yerleştir
     placedTiles.forEach(tile => {
         const { x, y, letter } = tile;
-        if (!letter || boardCopy[y][x] !== '') {
-            throw new Error(`Bu koordinat (${x}, ${y}) zaten dolu veya hatalı.`);
-        }
+// Eğer zaten doluysa ama yerleştirmek istediğimiz harf ile aynıysa sorun değil
+if (boardState[y][x] !== '' && boardState[y][x] !== letter) {
+    throw new Error(`Bu koordinat (${x}, ${y}) zaten farklı bir harf içeriyor.`);
+}
 
-        // Komşu taş kontrolü
+        // Her harf için komşu taş kontrolü
         let isValid = false;
         for (let i = 0; i < placedTiles.length; i++) {
             const tile = placedTiles[i];
-            if (hasAdjacentTile(boardCopy, tile.x, tile.y)) {
+            if (hasAdjacentTile(boardState, tile.x, tile.y)) {
                 isValid = true;
                 break;
             }
         }
 
-        if (!isValid && !firstMove) {
+        if (!isValid) {
             throw new Error("Yazılan kelimede en az bir komşu taş olmalıdır.");
         }
 
-        // Harfi geçici olarak boardCopy'e yerleştir
-        boardCopy[y][x] = letter;
+        // Harfi yerleştir
+        boardState[y][x] = letter;
 
-        if (!validateWordExtension(boardCopy, x, y, letter, true) &&
-            !validateWordExtension(boardCopy, x, y, letter, false)) {
+        // Burada validateWordExtension fonksiyonunu çağırıyoruz
+        if (!validateWordExtension(boardState, x, y, letter, true) && !validateWordExtension(boardState, x, y, letter, false)) {
             throw new Error(`Geçersiz kelime: ${letter}`);
         }
     });
@@ -258,12 +258,14 @@ function validateMove(boardState, placedTiles, firstMove) {
     placedTiles.forEach(tile => {
         const { x, y } = tile;
 
-        const horizontal = extractWordHorizontal(boardCopy, x, y);
+        // Yatay kelime çıkarma
+        const horizontal = extractWordHorizontal(boardState, x, y);
         if (horizontal.word.length > 1) {
             wordsToCheck.push({ ...horizontal, isHorizontal: true });
         }
 
-        const vertical = extractWordVertical(boardCopy, x, y);
+        // Dikey kelime çıkarma
+        const vertical = extractWordVertical(boardState, x, y);
         if (vertical.word.length > 1) {
             wordsToCheck.push({ ...vertical, isHorizontal: false });
         }
@@ -337,10 +339,9 @@ module.exports = {
             if (!game) {
                 return res.status(404).json({ message: "Oyun bulunamadı." });
             }
-
-            game.allValidWords = [...game.allValidWords, ...validWords];
-            await game.save();
-
+            if (!game.players || game.players.length < 2) {
+                return res.status(400).json({ message: "Oyuncu bilgileri eksik." });
+            }
             const nextPlayerId = (game.currentTurn.toString() === playerId.toString())
                 ? game.players[1]._id
                 : game.players[0]._id;
@@ -359,23 +360,8 @@ module.exports = {
     async getMovesByGame(req, res) {
         try {
             const { gameId } = req.params;
-            if (!gameId) {
-                return res.status(400).json({ message: "Oyun ID'si gereklidir." });
-            }
-    
-            // Oyunu veritabanından buluyoruz
-            const game = await Game.findById(gameId).populate('players'); // Oyuncuları da populate ederek alıyoruz
-            if (!game) {
-                return res.status(404).json({ message: "Oyun bulunamadı." });
-            }
-
             const moves = await Move.find({ gameId }).sort({ createdAt: 1 });
-            return res.status(200).json({
-            message: "Hamleler başarıyla alındı.",
-            gameId: game._id,
-            allValidWords: game.allValidWords, // Geçerli tüm kelimeler
-            moves, // Oyunun tüm hamleleri
-        });
+            return res.status(200).json(moves);
         } catch (err) {
             console.error(err);
             return res.status(500).json({ message: "Hamleler alınamadı." });

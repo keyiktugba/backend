@@ -7,7 +7,7 @@ const {
 } = require('../controllers/moveController');
 
 // Oyuna katılma ya da yeni oyun oluşturma
-router.post('/create-Move', createMove);
+router.post('/createMove', createMove);
 
 // Belirli bir oyun için tüm hamleleri getir
 router.get('/getMovesByGame/:gameId', getMovesByGame);
