@@ -211,6 +211,7 @@ function validateWordExtension(boardState, x, y, letter, isHorizontal) {
 
 
 function validateMove(boardState, placedTiles, firstMove) {
+    const boardCopy = boardState.map(row => [...row]); // 2D deep copy
     let validWords = [];
     let totalPoints = 0;
 
@@ -224,30 +225,29 @@ function validateMove(boardState, placedTiles, firstMove) {
     // Yeni taşları yerleştir
     placedTiles.forEach(tile => {
         const { x, y, letter } = tile;
-        if (!letter || boardState[y][x] !== '') {
+        if (!letter || boardCopy[y][x] !== '') {
             throw new Error(`Bu koordinat (${x}, ${y}) zaten dolu veya hatalı.`);
         }
 
-
-        // Her harf için komşu taş kontrolü
+        // Komşu taş kontrolü
         let isValid = false;
         for (let i = 0; i < placedTiles.length; i++) {
             const tile = placedTiles[i];
-            if (hasAdjacentTile(boardState, tile.x, tile.y)) {
+            if (hasAdjacentTile(boardCopy, tile.x, tile.y)) {
                 isValid = true;
                 break;
             }
         }
 
-        if (!isValid) {
+        if (!isValid && !firstMove) {
             throw new Error("Yazılan kelimede en az bir komşu taş olmalıdır.");
         }
 
-        // Harfi yerleştir
-        boardState[y][x] = letter;
+        // Harfi geçici olarak boardCopy'e yerleştir
+        boardCopy[y][x] = letter;
 
-        // Burada validateWordExtension fonksiyonunu çağırıyoruz
-        if (!validateWordExtension(boardState, x, y, letter, true) && !validateWordExtension(boardState, x, y, letter, false)) {
+        if (!validateWordExtension(boardCopy, x, y, letter, true) &&
+            !validateWordExtension(boardCopy, x, y, letter, false)) {
             throw new Error(`Geçersiz kelime: ${letter}`);
         }
     });
@@ -258,14 +258,12 @@ function validateMove(boardState, placedTiles, firstMove) {
     placedTiles.forEach(tile => {
         const { x, y } = tile;
 
-        // Yatay kelime çıkarma
-        const horizontal = extractWordHorizontal(boardState, x, y);
+        const horizontal = extractWordHorizontal(boardCopy, x, y);
         if (horizontal.word.length > 1) {
             wordsToCheck.push({ ...horizontal, isHorizontal: true });
         }
 
-        // Dikey kelime çıkarma
-        const vertical = extractWordVertical(boardState, x, y);
+        const vertical = extractWordVertical(boardCopy, x, y);
         if (vertical.word.length > 1) {
             wordsToCheck.push({ ...vertical, isHorizontal: false });
         }
