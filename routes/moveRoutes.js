@@ -8,5 +8,8 @@ const {
 
 // Oyuna katılma ya da yeni oyun oluşturma
 router.post('/create-Move', createMove);
-router.post('/getmovesbygame', getMovesByGame);
+
+// Belirli bir oyun için tüm hamleleri getir
+router.get('/getMovesByGame/:gameId', getMovesByGame);
+
 module.exports = router;
