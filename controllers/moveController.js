@@ -1,10 +1,8 @@
+//controller/moveController.js
 const Move = require('../models/Move');
 const Game = require('../models/Game');
 const { validWordsSet, letterPointsMap } = require('../utils/wordUtils');
 const kelimeListesi = require('../assets/kelimeler.json');
-
-
-
 // Yatay kelime çıkarma
 function extractWordHorizontal(boardState, x, y) {
     let startX = x;
@@ -21,7 +19,6 @@ function extractWordHorizontal(boardState, x, y) {
 
     return { word, startX, startY: y };
 }
-
 // Dikey kelime çıkarma
 function extractWordVertical(boardState, x, y) {
     let startY = y;
@@ -77,12 +74,10 @@ function calculateWordPoints(word, boardState, startX, startY, isHorizontal) {
         ],
         CENTER: [{ row: 7, col: 7 }]
     };
-
     // Bonus kontrol fonksiyonu
     function isBonusTile(x, y, bonusType) {
         return bonusTiles[bonusType].some(tile => tile.row === y && tile.col === x);
     }
-
     // Her harfi kontrol et
     for (let i = 0; i < word.length; i++) {
         const letter = word[i];
@@ -115,9 +110,6 @@ function calculateWordPoints(word, boardState, startX, startY, isHorizontal) {
     // Tüm kelimenin puanını multiplier ile çarp
     return totalPoints * wordMultiplier;
 }
-
-
-
 function validateWordExtension(boardState, x, y, letter, isHorizontal) {
     let isValid = true;
 
@@ -135,11 +127,10 @@ function validateWordExtension(boardState, x, y, letter, isHorizontal) {
             for (let i = startX; i < x; i++) {
                 wordBefore += boardState[y][i];
             }
-            if (!validWordsSet.has(wordBefore.toLowerCase())) {
+            if (!validWordsSet.has(wordBefore.toLocaleLowerCase('tr'))) {
                 isValid = false;
             }
         }
-
         // Sonraki harf ile birleştir
         let wordAfter = letter; // Burada harfi ekledik
         let currentX = x + 1;
@@ -147,10 +138,9 @@ function validateWordExtension(boardState, x, y, letter, isHorizontal) {
             wordAfter += boardState[y][currentX];
             currentX++;
         }
-        if (!validWordsSet.has(wordAfter.toLowerCase())) {
+        if (!validWordsSet.has(wordAfter.toLocaleLowerCase('tr'))) {
             isValid = false;
         }
-
         // Sonuna eklenen harf kontrolü
         if (y + 1 < boardState.length && boardState[y + 1][x] !== '') {
             let wordDown = letter;
@@ -159,7 +149,7 @@ function validateWordExtension(boardState, x, y, letter, isHorizontal) {
                 wordDown += boardState[currentY][x];
                 currentY++;
             }
-            if (!validWordsSet.has(wordDown.toLowerCase())) {
+            if (!validWordsSet.has(wordDown.toLocaleLowerCase('tr'))) {
                 isValid = false;
             }
         }
@@ -169,18 +159,16 @@ function validateWordExtension(boardState, x, y, letter, isHorizontal) {
         while (startY > 0 && boardState[startY - 1][x] !== '') {
             startY--;
         }
-
         // Eğer harf önceki kelimenin başına ekleniyorsa
         if (y - startY > 0) { // Eğer yukarıya doğru bir kelime varsa
             let wordBefore = '';
             for (let i = startY; i < y; i++) {
                 wordBefore += boardState[i][x];
             }
-            if (!validWordsSet.has(wordBefore.toLowerCase())) {
+            if (!validWordsSet.has(wordBefore.toLocaleLowerCase('tr'))) {
                 isValid = false;
             }
         }
-
         // Sonraki harf ile birleştir
         let wordAfter = letter; // Burada harfi ekledik
         let currentY = y + 1;
@@ -188,10 +176,9 @@ function validateWordExtension(boardState, x, y, letter, isHorizontal) {
             wordAfter += boardState[currentY][x];
             currentY++;
         }
-        if (!validWordsSet.has(wordAfter.toLowerCase())) {
+        if (!validWordsSet.has(wordAfter.toLocaleLowerCase('tr'))) {
             isValid = false;
         }
-
         // Sonuna eklenen harf kontrolü
         if (x + 1 < boardState[0].length && boardState[y][x + 1] !== '') {
             let wordRight = letter;
@@ -200,16 +187,13 @@ function validateWordExtension(boardState, x, y, letter, isHorizontal) {
                 wordRight += boardState[y][currentX];
                 currentX++;
             }
-            if (!validWordsSet.has(wordRight.toLowerCase())) {
+            if (!validWordsSet.has(wordRight.toLocaleLowerCase('tr'))) {
                 isValid = false;
             }
         }
     }
-
     return isValid;
 }
-
-
 function validateMove(boardState, placedTiles, firstMove) {
     let validWords = [];
     let totalPoints = 0;
@@ -220,15 +204,13 @@ function validateMove(boardState, placedTiles, firstMove) {
             throw new Error("İlk hamlede merkez karesi (7,7) kullanılmalıdır.");
         }
     }
-
     // Yeni taşları yerleştir
     placedTiles.forEach(tile => {
         const { x, y, letter } = tile;
-// Eğer zaten doluysa ama yerleştirmek istediğimiz harf ile aynıysa sorun değil
-if (boardState[y][x] !== '' && boardState[y][x] !== letter) {
-    throw new Error(`Bu koordinat (${x}, ${y}) zaten farklı bir harf içeriyor.`);
-}
-
+        // Eğer zaten doluysa ama yerleştirmek istediğimiz harf ile aynıysa sorun değil
+        if (boardState[y][x] !== '' && boardState[y][x] !== letter) {
+            throw new Error(`Bu koordinat (${x}, ${y}) zaten farklı bir harf içeriyor.`);
+        }
         // Her harf için komşu taş kontrolü
         let isValid = false;
         for (let i = 0; i < placedTiles.length; i++) {
@@ -238,26 +220,20 @@ if (boardState[y][x] !== '' && boardState[y][x] !== letter) {
                 break;
             }
         }
-
         if (!isValid) {
             throw new Error("Yazılan kelimede en az bir komşu taş olmalıdır.");
         }
-
         // Harfi yerleştir
         boardState[y][x] = letter;
-
         // Burada validateWordExtension fonksiyonunu çağırıyoruz
         if (!validateWordExtension(boardState, x, y, letter, true) && !validateWordExtension(boardState, x, y, letter, false)) {
             throw new Error(`Geçersiz kelime: ${letter}`);
         }
     });
-
     // Kontrol edilecek kelimeler
     let wordsToCheck = [];
-
     placedTiles.forEach(tile => {
         const { x, y } = tile;
-
         // Yatay kelime çıkarma
         const horizontal = extractWordHorizontal(boardState, x, y);
         if (horizontal.word.length > 1) {
@@ -270,7 +246,6 @@ if (boardState[y][x] !== '' && boardState[y][x] !== letter) {
             wordsToCheck.push({ ...vertical, isHorizontal: false });
         }
     });
-
     // Tekrar eden kelimeleri kaldır
     const uniqueWords = new Map();
     wordsToCheck.forEach(({ word, startX, startY, isHorizontal }) => {
@@ -278,9 +253,8 @@ if (boardState[y][x] !== '' && boardState[y][x] !== letter) {
             uniqueWords.set(word, { startX, startY, isHorizontal });
         }
     });
-
     uniqueWords.forEach((info, word) => {
-        const lowerWord = word.toLowerCase();
+        const lowerWord = word.toLocaleLowerCase('tr');
 
         // Geçerli kelime setine bakarak kelimeyi doğrula
         if (validWordsSet.has(lowerWord)) {
@@ -290,28 +264,20 @@ if (boardState[y][x] !== '' && boardState[y][x] !== letter) {
             throw new Error(`Geçersiz kelime: ${word}`);
         }
     });
-
     return { validWords, totalPoints };
 }
-
-
 // Taşın etrafında komşu bir taş var mı
 function hasAdjacentTile(boardState, x, y) {
     const adjacentPositions = [
         { x: x - 1, y }, { x: x + 1, y },
         { x, y: y - 1 }, { x, y: y + 1 }
     ];
-    
     return adjacentPositions.some(pos =>
         pos.x >= 0 && pos.x < boardState[0].length &&
         pos.y >= 0 && pos.y < boardState.length &&
         boardState[pos.y][pos.x] !== ''
     );
 }
-
-
-
-
 // Ana Controller Fonksiyonları
 module.exports = {
     async createMove(req, res) {
@@ -321,9 +287,7 @@ module.exports = {
             if (!gameId || !playerId || !placedTiles || !boardState) {
                 return res.status(400).json({ message: "Eksik veri gönderildi." });
             }
-
             const { validWords, totalPoints } = validateMove(boardState, placedTiles, firstMove);
-
             const move = new Move({
                 gameId,
                 playerId,
@@ -332,7 +296,6 @@ module.exports = {
                 totalPoints,
                 firstMove
             });
-
             await move.save();
 
             const game = await Game.findById(gameId);
@@ -356,7 +319,6 @@ module.exports = {
             return res.status(400).json({ message: err.message });
         }
     },
-
     async getMovesByGame(req, res) {
         try {
             const { gameId } = req.params;
