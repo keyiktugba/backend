@@ -221,8 +221,6 @@ exports.surrenderGame = async (req, res) => {
   try {
     const gameId = req.params.id;
     const { userId } = req.body;
-    console.log("Game ID:", gameId);
-    console.log("User ID:", userId);
     if (!userId) {
       return res.status(400).json({ message: 'User ID is required' });
     }
@@ -236,9 +234,7 @@ exports.surrenderGame = async (req, res) => {
       return res.status(400).json({ message: 'Game is already ended' });
     }
 
-    const ObjectId = require('mongodb').ObjectId;
-    const otherPlayer = game.players.find(p => p.toString() !== ObjectId(userId).toString());
-    console.log("Players in game:", game.players);
+    const otherPlayer = game.players.find(p => p.toString() !== userId); 
     game.isActive = false;
     game.endedAt = new Date();
     game.winner = otherPlayer || null;
