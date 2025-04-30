@@ -283,10 +283,22 @@ module.exports = {
     async createMove(req, res) {
         try {
             const { gameId, playerId, placedTiles, boardState, firstMove } = req.body;
-
+            console.log("Gelen Hamle Verisi:", req.body);
             if (!gameId || !playerId || !placedTiles || !boardState) {
                 return res.status(400).json({ message: "Eksik veri gönderildi." });
             }
+            const game = await Game.findById(gameId);
+            if (!game) {
+                return res.status(404).json({ message: "Oyun bulunamadı." });
+            }
+            if (!game.players || game.players.length < 2) {
+                return res.status(400).json({ message: "Oyuncu bilgileri eksik." });
+            }
+            // Eğer oyuncunun sırası değilse, hamlesi reddedilsin
+            if (game.currentTurn.toString() !== playerId.toString()) {
+                return res.status(400).json({ message: "Sıra sizde değil." });
+            }
+
             const { validWords, totalPoints } = validateMove(boardState, placedTiles, firstMove);
             const move = new Move({
                 gameId,
@@ -298,14 +310,7 @@ module.exports = {
             });
             await move.save();
 
-            const game = await Game.findById(gameId);
-            if (!game) {
-                return res.status(404).json({ message: "Oyun bulunamadı." });
-            }
-            if (!game.players || game.players.length < 2) {
-                return res.status(400).json({ message: "Oyuncu bilgileri eksik." });
-            }
-            const nextPlayerId = (game.currentTurn.toString() === playerId.toString())
+            const nextPlayerId = (game.currentTurn.toString() === game.players[0]._id.toString())
                 ? game.players[1]._id
                 : game.players[0]._id;
 

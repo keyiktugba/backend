@@ -20,7 +20,7 @@ const gameSchema = new Schema({
   startedAt: {
     type: Date,
     default: Date.now,
-    required: true
+    required: function() { return this.isActive; },
   },
   // Oyun bittiğinde set edilecek bitiş zamanı
   endedAt: {

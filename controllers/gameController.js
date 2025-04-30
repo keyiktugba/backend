@@ -9,22 +9,28 @@ exports.joinOrCreateGame = async (req, res) => {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    let game = await Game.findOne({ 
+    let game = await Game.findOne({
       isActive: false, 
-      players: { $size: 1 },
+      players: { $size: 1 }, 
       type: type
     });
 
     if (game) {
+      // Eğer bir oyun mevcutsa, oyuncuyu bu oyuna ekle
       game.players.push(userId);
-      game.isActive = true;
-      game.startedAt = Date.now();
-      game.currentTurn = game.players[0];
-      game.endedAt = null;
+
+      // Eğer 2 oyuncu olduysa, oyunu başlat
+      if (game.players.length === 2) {
+        game.isActive = true;
+        game.startedAt = Date.now();  // Oyun başladı, bu noktada "startedAt" geçerli bir zamanla güncellenir
+        game.currentTurn = game.players[0]; // İlk oyuncu başlar
+        game.endedAt = null; // Bitiş zamanını sıfırla
+      }
+      
       await game.save();
 
       return res.json({
-        message: 'Joined the game, game started',
+        message: game.players.length === 2 ? 'Game started' : 'Joined the game, waiting for another player',
         gameId: game._id,
         players: game.players,
         type: game.type,
@@ -34,11 +40,12 @@ exports.joinOrCreateGame = async (req, res) => {
         currentTurn: game.currentTurn
       });
     } else {
+      // Eğer aktif bir oyun yoksa, yeni oyun oluştur
       game = new Game({
         players: [userId],
         type,
-        isActive: false,
-        startedAt: Date.now(),
+        isActive: false, // Bekleme durumunda
+        startedAt: null,  // Başlangıç zamanını sıfırla, çünkü oyun henüz başlamadı
         currentTurn: userId,
         endedAt: null
       });
@@ -61,6 +68,7 @@ exports.joinOrCreateGame = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
 
 exports.getGameById = async (req, res) => {
   try {
