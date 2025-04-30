@@ -71,6 +71,9 @@ function calculateWordPoints(word, boardState, startX, startY, isHorizontal, gam
 
     const affectedMines = [];
 
+    // Ekstra hamle engeli kontrolü
+    let isExtraMoveBlocked = false;
+
     for (let i = 0; i < word.length; i++) {
         const letter = word[i].toUpperCase();
         const currentX = isHorizontal ? startX + i : startX;
@@ -78,11 +81,25 @@ function calculateWordPoints(word, boardState, startX, startY, isHorizontal, gam
 
         let letterPoints = letterPointsMap[letter] || 1;
 
-        // Bonuslar (harf puanları)
-        if (isBonusTile(currentX, currentY, 'H3')) {
-            letterPoints *= 3;
-        } else if (isBonusTile(currentX, currentY, 'H2')) {
-            letterPoints *= 2;
+        // Ekstra hamle engeli varsa, H2 ve H3 bonuslarını devre dışı bırak
+        if (game.mines.some(mine => mine.type === 'ekstra_hamle_engeli')) {
+            isExtraMoveBlocked = true;
+        }
+
+        // Eğer ekstra hamle engeli varsa, H2 ve H3 bonusları devre dışı kalmalı
+        if (isExtraMoveBlocked) {
+            if (isBonusTile(currentX, currentY, 'H3')) {
+                letterPoints = letterPoints; // 3x bonus devre dışı
+            } else if (isBonusTile(currentX, currentY, 'H2')) {
+                letterPoints = letterPoints; // 2x bonus devre dışı
+            }
+        } else {
+            // Bonuslar (harf puanları)
+            if (isBonusTile(currentX, currentY, 'H3')) {
+                letterPoints *= 3;
+            } else if (isBonusTile(currentX, currentY, 'H2')) {
+                letterPoints *= 2;
+            }
         }
 
         totalPoints += letterPoints;
@@ -131,6 +148,9 @@ function calculateWordPoints(word, boardState, startX, startY, isHorizontal, gam
 
     return totalPoints * wordMultiplier;
 }
+
+
+
 
 
 
