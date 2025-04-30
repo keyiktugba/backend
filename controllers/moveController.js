@@ -266,6 +266,102 @@ function validateMove(boardState, placedTiles, firstMove) {
     });
     return { validWords, totalPoints };
 }
+/*function validateMove(game, boardState, placedTiles, firstMove, currentPlayerId, opponentPlayerId) {
+    let validWords = [];
+    let totalPoints = 0;
+    let skipTurn = false;
+    let disableBonuses = false;
+    let transferToOpponent = 0;
+    let mineMessages = [];
+
+    if (firstMove) {
+        const isFirstMoveValid = placedTiles.some(tile => tile.x === 7 && tile.y === 7);
+        if (!isFirstMoveValid) {
+            throw new Error("İlk hamlede merkez karesi (7,7) kullanılmalıdır.");
+        }
+    }
+
+    // Yeni taşları yerleştir
+    placedTiles.forEach(tile => {
+        const { x, y, letter } = tile;
+        if (boardState[y][x] !== '' && boardState[y][x] !== letter) {
+            throw new Error(`Bu koordinat (${x}, ${y}) zaten farklı bir harf içeriyor.`);
+        }
+        if (!hasAdjacentTile(boardState, x, y)) {
+            throw new Error("Yazılan kelimede en az bir komşu taş olmalıdır.");
+        }
+        boardState[y][x] = letter;
+        if (!validateWordExtension(boardState, x, y, letter, true) && !validateWordExtension(boardState, x, y, letter, false)) {
+            throw new Error(`Geçersiz kelime: ${letter}`);
+        }
+    });
+
+    let wordsToCheck = [];
+    placedTiles.forEach(tile => {
+        const { x, y } = tile;
+        const horizontal = extractWordHorizontal(boardState, x, y);
+        if (horizontal.word.length > 1) {
+            wordsToCheck.push({ ...horizontal, isHorizontal: true });
+        }
+        const vertical = extractWordVertical(boardState, x, y);
+        if (vertical.word.length > 1) {
+            wordsToCheck.push({ ...vertical, isHorizontal: false });
+        }
+    });
+
+    const uniqueWords = new Map();
+    wordsToCheck.forEach(({ word, startX, startY, isHorizontal }) => {
+        if (!uniqueWords.has(word)) {
+            uniqueWords.set(word, { startX, startY, isHorizontal });
+        }
+    });
+
+    uniqueWords.forEach((info, word) => {
+        const lowerWord = word.toLocaleLowerCase('tr');
+        if (validWordsSet.has(lowerWord)) {
+            validWords.push(word);
+            let basePoints = calculateWordPoints(word, boardState, info.startX, info.startY, info.isHorizontal);
+
+            // Her kelime için ilgili hücrelerde mayın kontrolü
+            for (let i = 0; i < word.length; i++) {
+                const x = info.isHorizontal ? info.startX + i : info.startX;
+                const y = info.isHorizontal ? info.startY : info.startY + i;
+                const mineResult = checkMineEffect(game, y, x, basePoints, currentPlayerId, opponentPlayerId);
+
+                basePoints = mineResult.modifiedPoints ?? basePoints;
+                if (mineResult.transferToOpponent) {
+                    transferToOpponent += mineResult.transferToOpponent;
+                }
+                if (mineResult.disableBonuses) {
+                    disableBonuses = true;
+                }
+                if (mineResult.skipTurn) {
+                    skipTurn = true;
+                }
+                if (mineResult.message) {
+                    mineMessages.push(mineResult.message);
+                }
+
+                // Mayın varsa sadece bir kere işlenmesini istiyorsan `break;` ekleyebilirsin
+            }
+
+            totalPoints += basePoints;
+
+        } else {
+            throw new Error(`Geçersiz kelime: ${word}`);
+        }
+    });
+
+    return {
+        validWords,
+        totalPoints,
+        skipTurn,
+        disableBonuses,
+        transferToOpponent,
+        mineMessages
+    };
+}
+*/
 // Taşın etrafında komşu bir taş var mı
 function hasAdjacentTile(boardState, x, y) {
     const adjacentPositions = [
@@ -278,6 +374,42 @@ function hasAdjacentTile(boardState, x, y) {
         boardState[pos.y][pos.x] !== ''
     );
 }
+function checkMineEffect(game, row, col, wordPoints, currentPlayerId, opponentPlayerId) {
+    const mine = game.mines.find(m => m.row === row && m.col === col);
+    if (!mine) return { modifiedPoints: wordPoints, skipTurn: false, message: null };
+  
+    switch (mine.type) {
+      case 'puan_bolunmesi':
+        return {
+          modifiedPoints: Math.floor(wordPoints * 0.3),
+          skipTurn: false,
+          message: 'Puan bölünmesi mayınına denk gelindi.'
+        };
+      case 'puan_transferi':
+        return {
+          modifiedPoints: 0,
+          transferToOpponent: wordPoints,
+          skipTurn: false,
+          message: 'Puan transferi mayınına denk gelindi.'
+        };
+      case 'ekstra_hamle_engeli':
+        return {
+          modifiedPoints: wordPoints, // Harf ve kelime çarpanı varsa zaten iptal et
+          disableBonuses: true,
+          skipTurn: false,
+          message: 'Ekstra hamle engeli mayınına denk gelindi.'
+        };
+      case 'kelime_iptali':
+        return {
+          modifiedPoints: 0,
+          skipTurn: true,
+          message: 'Kelime iptali mayınına denk gelindi. Sıra rakibe geçti.'
+        };
+      default:
+        return { modifiedPoints: wordPoints, skipTurn: false, message: null };
+    }
+  }
+  
 // Ana Controller Fonksiyonları
 module.exports = {
     async createMove(req, res) {
