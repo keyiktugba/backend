@@ -1,6 +1,47 @@
 //controllers/gameController.js
 const Game = require('../models/Game');
 const User = require('../models/User');
+const mineTypes = [
+  { type: 'puan_bolunmesi', weight: 5, count: 5 },
+  { type: 'puan_transferi', weight: 4, count: 4 },
+  { type: 'harf_kaybi', weight: 3, count: 3 },
+  { type: 'ekstra_hamle_engeli', weight: 2, count: 2 },
+  { type: 'kelime_iptali', weight: 2, count: 2 }
+];
+
+const rewardTypes = [
+  { type: 'bolge_yasagi', weight: 2, count: 2 },
+  { type: 'harf_yasagi', weight: 3, count: 3 },
+  { type: 'ekstra_hamle', weight: 2, count: 2 }
+];
+
+// Rastgele tür seçen fonksiyon
+const getRandomWeightedType = (types) => {
+  const totalWeight = types.reduce((sum, item) => sum + item.weight, 0);
+  let randomWeight = Math.random() * totalWeight;
+
+  for (let i = 0; i < types.length; i++) {
+    randomWeight -= types[i].weight;
+    if (randomWeight <= 0) {
+      return types[i].type;
+    }
+  }
+};
+
+function generateRandomCoordinates(count, boardSize = 15) {
+  const coordinates = new Set();
+
+  while (coordinates.size < count) {
+    const row = Math.floor(Math.random() * boardSize);
+    const col = Math.floor(Math.random() * boardSize);
+    coordinates.add(`${row},${col}`);
+  }
+
+  return Array.from(coordinates).map(coord => {
+    const [row, col] = coord.split(',').map(Number);
+    return { row, col };
+  });
+}
 
 exports.joinOrCreateGame = async (req, res) => {
   try {
@@ -9,6 +50,7 @@ exports.joinOrCreateGame = async (req, res) => {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
+    // Bir oyun arıyoruz; eğer aktif değilse ve sadece 1 oyuncusu varsa
     let game = await Game.findOne({
       isActive: false, 
       players: { $size: 1 }, 
@@ -16,17 +58,44 @@ exports.joinOrCreateGame = async (req, res) => {
     });
 
     if (game) {
-      // Eğer bir oyun mevcutsa, oyuncuyu bu oyuna ekle
+      // Eğer oyun varsa, oyuncuyu ekliyoruz
       game.players.push(userId);
 
-      // Eğer 2 oyuncu olduysa, oyunu başlat
       if (game.players.length === 2) {
+        // Oyun başladığında gerekli alanlar set ediliyor
         game.isActive = true;
-        game.startedAt = Date.now();  // Oyun başladı, bu noktada "startedAt" geçerli bir zamanla güncellenir
-        game.currentTurn = game.players[0]; // İlk oyuncu başlar
-        game.endedAt = null; // Bitiş zamanını sıfırla
+        game.startedAt = Date.now();
+        game.currentTurn = game.players[0];
+        game.endedAt = null;
+
+        // --- Mayın ve ödül atamaları hemen yapılacak ---
+        let mineCoords = [];
+        let rewardCoords = [];
+
+        // Mayınları her türden belirli sayıda atıyoruz
+        mineTypes.forEach(mine => {
+          mineCoords = mineCoords.concat(generateRandomCoordinates(mine.count));
+        });
+
+        // Ödülleri her türden belirli sayıda atıyoruz
+        rewardTypes.forEach(reward => {
+          rewardCoords = rewardCoords.concat(generateRandomCoordinates(reward.count));
+        });
+
+        // Mayınları ve ödülleri ekliyoruz
+        game.mines = mineCoords.map(({ row, col }) => ({
+          row,
+          col,
+          type: getRandomWeightedType(mineTypes)
+        }));
+
+        game.rewards = rewardCoords.map(({ row, col }) => ({
+          row,
+          col,
+          type: getRandomWeightedType(rewardTypes)
+        }));
       }
-      
+
       await game.save();
 
       return res.json({
@@ -37,17 +106,22 @@ exports.joinOrCreateGame = async (req, res) => {
         startedAt: game.startedAt,
         endedAt: game.endedAt,
         isActive: game.isActive,
-        currentTurn: game.currentTurn
+        currentTurn: game.currentTurn,
+        mines: game.mines, // Mayınları ekledik
+        rewards: game.rewards // Ödülleri ekledik
       });
     } else {
-      // Eğer aktif bir oyun yoksa, yeni oyun oluştur
+      // Eğer oyun yoksa yeni bir oyun oluşturuluyor
       game = new Game({
         players: [userId],
         type,
-        isActive: false, // Bekleme durumunda
-        startedAt: null,  // Başlangıç zamanını sıfırla, çünkü oyun henüz başlamadı
+        isActive: false,
+        startedAt: null,
         currentTurn: userId,
-        endedAt: null
+        endedAt: null,
+        // --- Yeni oyun oluştuğunda mayın ve ödüller atanacak ---
+        mines: [], 
+        rewards: []
       });
 
       await game.save();
@@ -60,7 +134,9 @@ exports.joinOrCreateGame = async (req, res) => {
         startedAt: game.startedAt,
         endedAt: game.endedAt,
         isActive: game.isActive,
-        currentTurn: game.currentTurn
+        currentTurn: game.currentTurn,
+        mines: game.mines, // Mayınları ekledik
+        rewards: game.rewards // Ödülleri ekledik
       });
     }
   } catch (error) {
@@ -68,6 +144,8 @@ exports.joinOrCreateGame = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+
 exports.getGameById = async (req, res) => {
   try {
     const game = await Game.findById(req.params.id)
