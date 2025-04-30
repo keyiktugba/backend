@@ -36,80 +36,104 @@ function extractWordVertical(boardState, x, y) {
     return { word, startX: x, startY };
 }
 
-function calculateWordPoints(word, boardState, startX, startY, isHorizontal) {
+function calculateWordPoints(word, boardState, startX, startY, isHorizontal, game, playerId) {
     let totalPoints = 0;
     let wordMultiplier = 1;
     let x = startX;
     let y = startY;
 
-    // Bonus karelerin kontrolü
     const bonusTiles = {
         K3: [
-            { row: 0, col: 2 }, { row: 0, col: 12 },
-            { row: 2, col: 0 }, { row: 2, col: 14 },
-            { row: 12, col: 0 }, { row: 12, col: 14 },
-            { row: 14, col: 2 }, { row: 14, col: 12 },
+            { row: 0, col: 2 }, { row: 0, col: 12 }, { row: 2, col: 0 }, { row: 2, col: 14 },
+            { row: 12, col: 0 }, { row: 12, col: 14 }, { row: 14, col: 2 }, { row: 14, col: 12 }
         ],
         H3: [
-            { row: 1, col: 1 }, { row: 1, col: 13 },
-            { row: 4, col: 4 }, { row: 4, col: 10 },
-            { row: 10, col: 4 }, { row: 10, col: 10 },
-            { row: 13, col: 1 }, { row: 13, col: 13 },
+            { row: 1, col: 1 }, { row: 1, col: 13 }, { row: 4, col: 4 }, { row: 4, col: 10 },
+            { row: 10, col: 4 }, { row: 10, col: 10 }, { row: 13, col: 1 }, { row: 13, col: 13 }
         ],
         K2: [
-            { row: 3, col: 3 }, { row: 3, col: 11 },
-            { row: 7, col: 2 }, { row: 7, col: 12 },
-            { row: 11, col: 3 }, { row: 11, col: 11 },
-            { row: 12, col: 7 }, { row: 2, col: 7 },
+            { row: 3, col: 3 }, { row: 3, col: 11 }, { row: 7, col: 2 }, { row: 7, col: 12 },
+            { row: 11, col: 3 }, { row: 11, col: 11 }, { row: 12, col: 7 }, { row: 2, col: 7 }
         ],
         H2: [
-            { row: 0, col: 5 }, { row: 0, col: 9 },
-            { row: 1, col: 6 }, { row: 1, col: 8 },
+            { row: 0, col: 5 }, { row: 0, col: 9 }, { row: 1, col: 6 }, { row: 1, col: 8 },
             { row: 5, col: 0 }, { row: 5, col: 5 }, { row: 5, col: 9 }, { row: 5, col: 14 },
             { row: 6, col: 1 }, { row: 6, col: 6 }, { row: 6, col: 8 }, { row: 6, col: 13 },
             { row: 8, col: 1 }, { row: 8, col: 6 }, { row: 8, col: 8 }, { row: 8, col: 13 },
             { row: 9, col: 0 }, { row: 9, col: 5 }, { row: 9, col: 9 }, { row: 9, col: 14 },
-            { row: 13, col: 5 }, { row: 13, col: 9 },
-            { row: 14, col: 6 }, { row: 14, col: 8 },
+            { row: 13, col: 5 }, { row: 13, col: 9 }, { row: 14, col: 6 }, { row: 14, col: 8 }
         ],
         CENTER: [{ row: 7, col: 7 }]
     };
-    // Bonus kontrol fonksiyonu
-    function isBonusTile(x, y, bonusType) {
-        return bonusTiles[bonusType].some(tile => tile.row === y && tile.col === x);
-    }
-    // Her harfi kontrol et
+
+    const isBonusTile = (x, y, type) =>
+        bonusTiles[type].some(tile => tile.row === y && tile.col === x);
+
+    const affectedMines = [];
+
     for (let i = 0; i < word.length; i++) {
-        const letter = word[i];
+        const letter = word[i].toUpperCase();
+        const currentX = isHorizontal ? startX + i : startX;
+        const currentY = isHorizontal ? startY : startY + i;
+
         let letterPoints = letterPointsMap[letter] || 1;
 
-        // Eğer harf H2 veya H3'teyse, sadece bu harfi etkiler
-        if (isBonusTile(x, y, 'H3')) {
+        // Bonuslar (harf puanları)
+        if (isBonusTile(currentX, currentY, 'H3')) {
             letterPoints *= 3;
-        } else if (isBonusTile(x, y, 'H2')) {
+        } else if (isBonusTile(currentX, currentY, 'H2')) {
             letterPoints *= 2;
         }
 
         totalPoints += letterPoints;
 
-        // Eğer K2 veya K3 varsa, tüm kelimenin puanını artır
-        if (isBonusTile(x, y, 'K3')) {
+        // Bonuslar (kelime puanı)
+        if (isBonusTile(currentX, currentY, 'K3')) {
             wordMultiplier *= 3;
-        } else if (isBonusTile(x, y, 'K2')) {
+        } else if (isBonusTile(currentX, currentY, 'K2')) {
             wordMultiplier *= 2;
         }
 
-        // Hareketi yatay veya dikey olarak kontrol et
-        if (isHorizontal) {
-            x++;
-        } else {
-            y++;
+        // Mayın kontrolü
+        const mine = game.mines.find(m => m.row === currentY && m.col === currentX);
+        if (mine) affectedMines.push(mine);
+    }
+
+    // Mayın etkilerini uygula
+    for (const mine of affectedMines) {
+        switch (mine.type) {
+            case 'puan_bolunmesi':
+                totalPoints = Math.floor(totalPoints * 0.3);
+                break;
+
+            case 'puan_transferi':
+                const opponentId = game.players.find(id => id.toString() !== playerId.toString());
+                game.scores = game.scores.map(score =>
+                    score.player.toString() === opponentId.toString()
+                        ? { ...score, point: score.point + totalPoints }
+                        : score
+                );
+                totalPoints = 0;
+                break;
+
+            case 'ekstra_hamle_engeli':
+                wordMultiplier = 1;
+                break;
+
+            case 'kelime_iptali':
+                totalPoints = 0;
+                break;
+
+            default:
+                break;
         }
     }
 
-    // Tüm kelimenin puanını multiplier ile çarp
     return totalPoints * wordMultiplier;
 }
+
+
+
 function validateWordExtension(boardState, x, y, letter, isHorizontal) {
     let isValid = true;
 
@@ -194,7 +218,7 @@ function validateWordExtension(boardState, x, y, letter, isHorizontal) {
     }
     return isValid;
 }
-function validateMove(boardState, placedTiles, firstMove) {
+function validateMove(boardState, placedTiles, firstMove,game, playerId) {
     let validWords = [];
     let totalPoints = 0;
 
@@ -259,7 +283,7 @@ function validateMove(boardState, placedTiles, firstMove) {
         // Geçerli kelime setine bakarak kelimeyi doğrula
         if (validWordsSet.has(lowerWord)) {
             validWords.push(word);
-            totalPoints += calculateWordPoints(word, boardState, info.startX, info.startY, info.isHorizontal);
+            totalPoints += calculateWordPoints(word, boardState, info.startX, info.startY, info.isHorizontal,game,playerId);
         } else {
             throw new Error(`Geçersiz kelime: ${word}`);
         }
@@ -374,41 +398,7 @@ function hasAdjacentTile(boardState, x, y) {
         boardState[pos.y][pos.x] !== ''
     );
 }
-function checkMineEffect(game, row, col, wordPoints, currentPlayerId, opponentPlayerId) {
-    const mine = game.mines.find(m => m.row === row && m.col === col);
-    if (!mine) return { modifiedPoints: wordPoints, skipTurn: false, message: null };
-  
-    switch (mine.type) {
-      case 'puan_bolunmesi':
-        return {
-          modifiedPoints: Math.floor(wordPoints * 0.3),
-          skipTurn: false,
-          message: 'Puan bölünmesi mayınına denk gelindi.'
-        };
-      case 'puan_transferi':
-        return {
-          modifiedPoints: 0,
-          transferToOpponent: wordPoints,
-          skipTurn: false,
-          message: 'Puan transferi mayınına denk gelindi.'
-        };
-      case 'ekstra_hamle_engeli':
-        return {
-          modifiedPoints: wordPoints, // Harf ve kelime çarpanı varsa zaten iptal et
-          disableBonuses: true,
-          skipTurn: false,
-          message: 'Ekstra hamle engeli mayınına denk gelindi.'
-        };
-      case 'kelime_iptali':
-        return {
-          modifiedPoints: 0,
-          skipTurn: true,
-          message: 'Kelime iptali mayınına denk gelindi. Sıra rakibe geçti.'
-        };
-      default:
-        return { modifiedPoints: wordPoints, skipTurn: false, message: null };
-    }
-  }
+
   
 // Ana Controller Fonksiyonları
 module.exports = {
@@ -431,7 +421,7 @@ module.exports = {
                 return res.status(400).json({ message: "Sıra sizde değil." });
             }
 
-            const { validWords, totalPoints } = validateMove(boardState, placedTiles, firstMove);
+            const { validWords, totalPoints } = validateMove(boardState, placedTiles, firstMove,game,game.currentTurn);
             const move = new Move({
                 gameId,
                 playerId,
