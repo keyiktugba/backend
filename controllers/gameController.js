@@ -139,25 +139,3 @@ exports.getAllGames = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-exports.passTurn = async (req, res) => {
-  const { gameId } = req.params;
-  const { playerId } = req.body;
-
-  try {
-    const game = await Game.findById(gameId);
-    if (!game) return res.status(404).json({ message: "Game not found" });
-
-    // Sıra oyuncudaysa pas geçilebilir
-    if (game.currentTurn.toString() !== playerId) {
-      return res.status(403).json({ message: "Sıra sizde değil" });
-    }
-
-    const nextPlayer = game.players.find(p => p.toString() !== playerId);
-    game.currentTurn = nextPlayer;
-    await game.save();
-
-    res.json({ message: "Sıra rakibe geçti", nextPlayer });
-  } catch (err) {
-    res.status(500).json({ message: "Pass işlemi başarısız", error: err });
-  }
-};

@@ -25,7 +25,4 @@ router.get('/all', getAllGames);
 // Tekil oyun bilgisi getirme (gameId ile)
 router.get('/:id', getGameById);
 
-// pass için
-router.post("/games/:gameId/pass", passTurn);
-
 module.exports = router;
