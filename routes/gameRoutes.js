@@ -6,7 +6,8 @@ const {
   getActiveGames,
   getCompletedGames,
   getAllGames,
-  getGameById
+  getGameById,
+  passTurn
 } = require('../controllers/gameController');
 
 // Oyuna katılma ya da yeni oyun oluşturma
@@ -25,6 +26,6 @@ router.get('/all', getAllGames);
 router.get('/:id', getGameById);
 
 // pass için
-router.post("/games/:gameId/pass", gameController.passTurn);
+router.post("/games/:gameId/pass", passTurn);
 
 module.exports = router;
