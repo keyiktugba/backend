@@ -3,45 +3,37 @@ const Move = require('../models/Move');
 const Game = require('../models/Game');
 const { validWordsSet, letterPointsMap } = require('../utils/wordUtils');
 const kelimeListesi = require('../assets/kelimeler.json');
-// Yatay kelime çıkarma
 function extractWordHorizontal(boardState, x, y) {
     let startX = x;
     while (startX > 0 && boardState[y][startX - 1] !== '') {
         startX--;
     }
-
     let word = '';
     let currentX = startX;
     while (currentX < boardState[0].length && boardState[y][currentX] !== '') {
         word += boardState[y][currentX];
         currentX++;
     }
-
     return { word, startX, startY: y };
 }
-// Dikey kelime çıkarma
 function extractWordVertical(boardState, x, y) {
     let startY = y;
     while (startY > 0 && boardState[startY - 1][x] !== '') {
         startY--;
     }
-
     let word = '';
     let currentY = startY;
     while (currentY < boardState.length && boardState[currentY][x] !== '') {
         word += boardState[currentY][x];
         currentY++;
     }
-
     return { word, startX: x, startY };
 }
-
 function calculateWordPoints(word, boardState, startX, startY, isHorizontal, game, playerId) {
     let totalPoints = 0;
     let wordMultiplier = 1;
     let x = startX;
     let y = startY;
-
     const bonusTiles = {
         K3: [
             { row: 0, col: 2 }, { row: 0, col: 12 }, { row: 2, col: 0 }, { row: 2, col: 14 },
@@ -65,64 +57,45 @@ function calculateWordPoints(word, boardState, startX, startY, isHorizontal, gam
         ],
         CENTER: [{ row: 7, col: 7 }]
     };
-
     const isBonusTile = (x, y, type) =>
         bonusTiles[type].some(tile => tile.row === y && tile.col === x);
-
     const affectedMines = [];
-
-    // Ekstra hamle engeli kontrolü
     let isExtraMoveBlocked = false;
-
     for (let i = 0; i < word.length; i++) {
         const letter = word[i].toUpperCase();
         const currentX = isHorizontal ? startX + i : startX;
         const currentY = isHorizontal ? startY : startY + i;
-
         let letterPoints = letterPointsMap[letter] || 1;
-
-        // Ekstra hamle engeli varsa, H2 ve H3 bonuslarını devre dışı bırak
         if (game.mines.some(mine => mine.type === 'ekstra_hamle_engeli')) {
             isExtraMoveBlocked = true;
         }
-
-        // Eğer ekstra hamle engeli varsa, H2 ve H3 bonusları devre dışı kalmalı
         if (isExtraMoveBlocked) {
             if (isBonusTile(currentX, currentY, 'H3')) {
-                letterPoints = letterPoints; // 3x bonus devre dışı
+                letterPoints = letterPoints; 
             } else if (isBonusTile(currentX, currentY, 'H2')) {
-                letterPoints = letterPoints; // 2x bonus devre dışı
+                letterPoints = letterPoints; 
             }
         } else {
-            // Bonuslar (harf puanları)
             if (isBonusTile(currentX, currentY, 'H3')) {
                 letterPoints *= 3;
             } else if (isBonusTile(currentX, currentY, 'H2')) {
                 letterPoints *= 2;
             }
         }
-
         totalPoints += letterPoints;
-
-        // Bonuslar (kelime puanı)
         if (isBonusTile(currentX, currentY, 'K3')) {
             wordMultiplier *= 3;
         } else if (isBonusTile(currentX, currentY, 'K2')) {
             wordMultiplier *= 2;
         }
-
-        // Mayın kontrolü
         const mine = game.mines.find(m => m.row === currentY && m.col === currentX);
         if (mine) affectedMines.push(mine);
     }
-
-    // Mayın etkilerini uygula
     for (const mine of affectedMines) {
         switch (mine.type) {
             case 'puan_bolunmesi':
                 totalPoints = Math.floor(totalPoints * 0.3);
                 break;
-
             case 'puan_transferi':
                 const opponentId = game.players.find(id => id.toString() !== playerId.toString());
                 game.scores = game.scores.map(score =>
@@ -132,41 +105,26 @@ function calculateWordPoints(word, boardState, startX, startY, isHorizontal, gam
                 );
                 totalPoints = 0;
                 break;
-
             case 'ekstra_hamle_engeli':
                 wordMultiplier = 1;
                 break;
-
             case 'kelime_iptali':
                 totalPoints = 0;
                 break;
-
             default:
                 break;
         }
     }
-
     return totalPoints * wordMultiplier;
 }
-
-
-
-
-
-
 function validateWordExtension(boardState, x, y, letter, isHorizontal) {
     let isValid = true;
-
-    // Yatay kelime için başa veya sona eklenen harfi kontrol et
     if (isHorizontal) {
-        // Başlangıçtan önce harf var mı?
         let startX = x;
         while (startX > 0 && boardState[y][startX - 1] !== '') {
             startX--;
         }
-
-        // Eğer harf önceki kelimenin başına ekleniyorsa
-        if (x - startX > 0) { // Eğer sola doğru bir kelime varsa
+        if (x - startX > 0) { 
             let wordBefore = '';
             for (let i = startX; i < x; i++) {
                 wordBefore += boardState[y][i];
@@ -175,8 +133,7 @@ function validateWordExtension(boardState, x, y, letter, isHorizontal) {
                 isValid = false;
             }
         }
-        // Sonraki harf ile birleştir
-        let wordAfter = letter; // Burada harfi ekledik
+        let wordAfter = letter;
         let currentX = x + 1;
         while (currentX < boardState[0].length && boardState[y][currentX] !== '') {
             wordAfter += boardState[y][currentX];
@@ -185,7 +142,6 @@ function validateWordExtension(boardState, x, y, letter, isHorizontal) {
         if (!validWordsSet.has(wordAfter.toLocaleLowerCase('tr'))) {
             isValid = false;
         }
-        // Sonuna eklenen harf kontrolü
         if (y + 1 < boardState.length && boardState[y + 1][x] !== '') {
             let wordDown = letter;
             let currentY = y + 1;
@@ -198,13 +154,11 @@ function validateWordExtension(boardState, x, y, letter, isHorizontal) {
             }
         }
     } else {
-        // Dikey kelime için başa veya sona eklenen harfi kontrol et
         let startY = y;
         while (startY > 0 && boardState[startY - 1][x] !== '') {
             startY--;
         }
-        // Eğer harf önceki kelimenin başına ekleniyorsa
-        if (y - startY > 0) { // Eğer yukarıya doğru bir kelime varsa
+        if (y - startY > 0) { 
             let wordBefore = '';
             for (let i = startY; i < y; i++) {
                 wordBefore += boardState[i][x];
@@ -213,8 +167,7 @@ function validateWordExtension(boardState, x, y, letter, isHorizontal) {
                 isValid = false;
             }
         }
-        // Sonraki harf ile birleştir
-        let wordAfter = letter; // Burada harfi ekledik
+        let wordAfter = letter; 
         let currentY = y + 1;
         while (currentY < boardState.length && boardState[currentY][x] !== '') {
             wordAfter += boardState[currentY][x];
@@ -223,7 +176,6 @@ function validateWordExtension(boardState, x, y, letter, isHorizontal) {
         if (!validWordsSet.has(wordAfter.toLocaleLowerCase('tr'))) {
             isValid = false;
         }
-        // Sonuna eklenen harf kontrolü
         if (x + 1 < boardState[0].length && boardState[y][x + 1] !== '') {
             let wordRight = letter;
             let currentX = x + 1;
@@ -248,14 +200,11 @@ function validateMove(boardState, placedTiles, firstMove,game, playerId) {
             throw new Error("İlk hamlede merkez karesi (7,7) kullanılmalıdır.");
         }
     }
-    // Yeni taşları yerleştir
     placedTiles.forEach(tile => {
         const { x, y, letter } = tile;
-        // Eğer zaten doluysa ama yerleştirmek istediğimiz harf ile aynıysa sorun değil
         if (boardState[y][x] !== '' && boardState[y][x] !== letter) {
             throw new Error(`Bu koordinat (${x}, ${y}) zaten farklı bir harf içeriyor.`);
         }
-        // Her harf için komşu taş kontrolü
         let isValid = false;
         for (let i = 0; i < placedTiles.length; i++) {
             const tile = placedTiles[i];
@@ -267,30 +216,24 @@ function validateMove(boardState, placedTiles, firstMove,game, playerId) {
         if (!isValid) {
             throw new Error("Yazılan kelimede en az bir komşu taş olmalıdır.");
         }
-        // Harfi yerleştir
         boardState[y][x] = letter;
-        // Burada validateWordExtension fonksiyonunu çağırıyoruz
-        if (!validateWordExtension(boardState, x, y, letter, true) && !validateWordExtension(boardState, x, y, letter, false)) {
+        if (!validateWordExtension(boardState, x, y, letter, true) && 
+            !validateWordExtension(boardState, x, y, letter, false)) {
             throw new Error(`Geçersiz kelime: ${letter}`);
         }
     });
-    // Kontrol edilecek kelimeler
     let wordsToCheck = [];
     placedTiles.forEach(tile => {
         const { x, y } = tile;
-        // Yatay kelime çıkarma
         const horizontal = extractWordHorizontal(boardState, x, y);
         if (horizontal.word.length > 1) {
             wordsToCheck.push({ ...horizontal, isHorizontal: true });
         }
-
-        // Dikey kelime çıkarma
         const vertical = extractWordVertical(boardState, x, y);
         if (vertical.word.length > 1) {
             wordsToCheck.push({ ...vertical, isHorizontal: false });
         }
     });
-    // Tekrar eden kelimeleri kaldır
     const uniqueWords = new Map();
     wordsToCheck.forEach(({ word, startX, startY, isHorizontal }) => {
         if (!uniqueWords.has(word)) {
@@ -299,114 +242,21 @@ function validateMove(boardState, placedTiles, firstMove,game, playerId) {
     });
     uniqueWords.forEach((info, word) => {
         const lowerWord = word.toLocaleLowerCase('tr');
-
-        // Geçerli kelime setine bakarak kelimeyi doğrula
         if (validWordsSet.has(lowerWord)) {
             validWords.push(word);
-            totalPoints += calculateWordPoints(word, boardState, info.startX, info.startY, info.isHorizontal,game,playerId);
+            totalPoints += calculateWordPoints(word, boardState, info.startX, info.startY, info.isHorizontal, game, playerId);
         } else {
             throw new Error(`Geçersiz kelime: ${word}`);
         }
     });
+    const scoreEntry = game.scores.find(s => s.player.toString() === playerId.toString());
+    if (scoreEntry) {
+        scoreEntry.score += totalPoints;
+    } else {
+        game.scores.push({ player: playerId, score: totalPoints });
+    }
     return { validWords, totalPoints };
 }
-/*function validateMove(game, boardState, placedTiles, firstMove, currentPlayerId, opponentPlayerId) {
-    let validWords = [];
-    let totalPoints = 0;
-    let skipTurn = false;
-    let disableBonuses = false;
-    let transferToOpponent = 0;
-    let mineMessages = [];
-
-    if (firstMove) {
-        const isFirstMoveValid = placedTiles.some(tile => tile.x === 7 && tile.y === 7);
-        if (!isFirstMoveValid) {
-            throw new Error("İlk hamlede merkez karesi (7,7) kullanılmalıdır.");
-        }
-    }
-
-    // Yeni taşları yerleştir
-    placedTiles.forEach(tile => {
-        const { x, y, letter } = tile;
-        if (boardState[y][x] !== '' && boardState[y][x] !== letter) {
-            throw new Error(`Bu koordinat (${x}, ${y}) zaten farklı bir harf içeriyor.`);
-        }
-        if (!hasAdjacentTile(boardState, x, y)) {
-            throw new Error("Yazılan kelimede en az bir komşu taş olmalıdır.");
-        }
-        boardState[y][x] = letter;
-        if (!validateWordExtension(boardState, x, y, letter, true) && !validateWordExtension(boardState, x, y, letter, false)) {
-            throw new Error(`Geçersiz kelime: ${letter}`);
-        }
-    });
-
-    let wordsToCheck = [];
-    placedTiles.forEach(tile => {
-        const { x, y } = tile;
-        const horizontal = extractWordHorizontal(boardState, x, y);
-        if (horizontal.word.length > 1) {
-            wordsToCheck.push({ ...horizontal, isHorizontal: true });
-        }
-        const vertical = extractWordVertical(boardState, x, y);
-        if (vertical.word.length > 1) {
-            wordsToCheck.push({ ...vertical, isHorizontal: false });
-        }
-    });
-
-    const uniqueWords = new Map();
-    wordsToCheck.forEach(({ word, startX, startY, isHorizontal }) => {
-        if (!uniqueWords.has(word)) {
-            uniqueWords.set(word, { startX, startY, isHorizontal });
-        }
-    });
-
-    uniqueWords.forEach((info, word) => {
-        const lowerWord = word.toLocaleLowerCase('tr');
-        if (validWordsSet.has(lowerWord)) {
-            validWords.push(word);
-            let basePoints = calculateWordPoints(word, boardState, info.startX, info.startY, info.isHorizontal);
-
-            // Her kelime için ilgili hücrelerde mayın kontrolü
-            for (let i = 0; i < word.length; i++) {
-                const x = info.isHorizontal ? info.startX + i : info.startX;
-                const y = info.isHorizontal ? info.startY : info.startY + i;
-                const mineResult = checkMineEffect(game, y, x, basePoints, currentPlayerId, opponentPlayerId);
-
-                basePoints = mineResult.modifiedPoints ?? basePoints;
-                if (mineResult.transferToOpponent) {
-                    transferToOpponent += mineResult.transferToOpponent;
-                }
-                if (mineResult.disableBonuses) {
-                    disableBonuses = true;
-                }
-                if (mineResult.skipTurn) {
-                    skipTurn = true;
-                }
-                if (mineResult.message) {
-                    mineMessages.push(mineResult.message);
-                }
-
-                // Mayın varsa sadece bir kere işlenmesini istiyorsan `break;` ekleyebilirsin
-            }
-
-            totalPoints += basePoints;
-
-        } else {
-            throw new Error(`Geçersiz kelime: ${word}`);
-        }
-    });
-
-    return {
-        validWords,
-        totalPoints,
-        skipTurn,
-        disableBonuses,
-        transferToOpponent,
-        mineMessages
-    };
-}
-*/
-// Taşın etrafında komşu bir taş var mı
 function hasAdjacentTile(boardState, x, y) {
     const adjacentPositions = [
         { x: x - 1, y }, { x: x + 1, y },
@@ -418,9 +268,6 @@ function hasAdjacentTile(boardState, x, y) {
         boardState[pos.y][pos.x] !== ''
     );
 }
-
-  
-// Ana Controller Fonksiyonları
 module.exports = {
     async createMove(req, res) {
         try {
