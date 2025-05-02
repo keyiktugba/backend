@@ -96,15 +96,19 @@ function calculateWordPoints(word, boardState, startX, startY, isHorizontal, gam
             case 'puan_bolunmesi':
                 totalPoints = Math.floor(totalPoints * 0.3);
                 break;
-            case 'puan_transferi':
-                const opponentId = game.players.find(id => id.toString() !== playerId.toString());
-                game.scores = game.scores.map(score =>
-                    score.player.toString() === opponentId.toString()
-                        ? { ...score, point: score.point + totalPoints }
-                        : score
-                );
-                totalPoints = 0;
-                break;
+                case 'puan_transferi':
+                    const opponentId = game.players.find(id => id.toString() !== playerId.toString());
+        
+                    // Rakip oyuncuya puan ekleniyor
+                    game.scores = game.scores.map(score =>
+                        score.player.toString() === opponentId.toString()
+                            ? { ...score, score: score.score + totalPoints }  // Rakip oyuncuya puan ekleniyor
+                            : score
+                    );
+        
+                    // Skor sıfırlanıyor
+                    totalPoints = 0;
+                    break;
             case 'ekstra_hamle_engeli':
                 wordMultiplier = 1;
                 break;
@@ -115,6 +119,7 @@ function calculateWordPoints(word, boardState, startX, startY, isHorizontal, gam
                 break;
         }
     }
+
     return totalPoints * wordMultiplier;
 }
 function validateWordExtension(boardState, x, y, letter, isHorizontal) {
@@ -200,22 +205,20 @@ function validateMove(boardState, placedTiles, firstMove,game, playerId) {
             throw new Error("İlk hamlede merkez karesi (7,7) kullanılmalıdır.");
         }
     }
+    if (!firstMove) {
+        const isConnectedToOld = placedTiles.some(({ x, y }) =>
+            hasAdjacentToOldTiles(boardState, x, y, placedTiles)
+        );
+        if (!isConnectedToOld) {
+            throw new Error("Yeni hamledeki taşlar tahtadaki mevcut taşlara komşu olmalıdır.");
+        }
+    }
     placedTiles.forEach(tile => {
         const { x, y, letter } = tile;
         if (boardState[y][x] !== '' && boardState[y][x] !== letter) {
             throw new Error(`Bu koordinat (${x}, ${y}) zaten farklı bir harf içeriyor.`);
         }
-        let isValid = false;
-        for (let i = 0; i < placedTiles.length; i++) {
-            const tile = placedTiles[i];
-            if (hasAdjacentTile(boardState, tile.x, tile.y)) {
-                isValid = true;
-                break;
-            }
-        }
-        if (!isValid) {
-            throw new Error("Yazılan kelimede en az bir komşu taş olmalıdır.");
-        }
+        
         boardState[y][x] = letter;
         if (!validateWordExtension(boardState, x, y, letter, true) && 
             !validateWordExtension(boardState, x, y, letter, false)) {
@@ -257,15 +260,19 @@ function validateMove(boardState, placedTiles, firstMove,game, playerId) {
     }
     return { validWords, totalPoints };
 }
-function hasAdjacentTile(boardState, x, y) {
+function hasAdjacentToOldTiles(boardState, x, y, placedTiles) {
+    const isPlacedTile = (px, py) => placedTiles.some(t => t.x === px && t.y === py);
+
     const adjacentPositions = [
         { x: x - 1, y }, { x: x + 1, y },
         { x, y: y - 1 }, { x, y: y + 1 }
     ];
+
     return adjacentPositions.some(pos =>
         pos.x >= 0 && pos.x < boardState[0].length &&
         pos.y >= 0 && pos.y < boardState.length &&
-        boardState[pos.y][pos.x] !== ''
+        boardState[pos.y][pos.x] !== '' &&
+        !isPlacedTile(pos.x, pos.y) // 🔥 Komşu ama yeni yerleştirilmemiş olmalı
     );
 }
 module.exports = {
