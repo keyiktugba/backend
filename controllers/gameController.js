@@ -171,7 +171,8 @@ exports.getCompletedGames = async (req, res) => {
         userScore,
         opponentUsername: opponentScoreEntry?.player?.username || 'Bilinmiyor',
         opponentScore,
-        result
+        result,
+        winner: game.winner 
       };
     });
     res.json(formattedGames);
@@ -212,5 +213,25 @@ exports.surrenderGame = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Surrender failed', error: error.message });
+  }
+};
+exports.endGame = async (req, res) => {
+  try {
+    const { gameId, winnerId } = req.body;
+    const game = await Game.findById(gameId);
+    if (!game) {
+      return res.status(404).json({ message: 'Game not found' });
+    }
+    game.winner = winnerId;
+    game.isActive = false;
+    game.endedAt = Date.now(); 
+    await game.save();
+    res.json({ 
+      message: 'Game ended successfully', 
+      winner: winnerId 
+    });
+  } catch (error) {
+    console.error('Game end error:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 };

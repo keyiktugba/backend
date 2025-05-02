@@ -7,7 +7,8 @@ const {
   getCompletedGames,
   getAllGames,
   getGameById,
-  surrenderGame
+  surrenderGame,
+  endGame
 } = require('../controllers/gameController');
 
 // Oyuna katılma ya da yeni oyun oluşturma
@@ -27,5 +28,8 @@ router.get('/:id', getGameById);
 
 //oyunu bitirmek için
 router.post('/:id/surrender', surrenderGame);
+
+// Oyunu sonlandırmak için
+router.post('/:id/end', endGame);
 
 module.exports = router;

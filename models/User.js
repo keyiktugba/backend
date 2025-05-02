@@ -51,22 +51,16 @@ const userSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Password hashing middleware
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password_hash')) {
     next();
   }
-
   const salt = await bcrypt.genSalt(10);
   this.password_hash = await bcrypt.hash(this.password_hash, salt);
 });
-
-// Method to check password
 userSchema.methods.matchPassword = async function(enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password_hash);
 };
-
-// Calculate success rate
 userSchema.pre('save', function(next) {
   if (this.games_played > 0) {
     this.success_rate = (this.games_won / this.games_played) * 100;
@@ -75,7 +69,6 @@ userSchema.pre('save', function(next) {
   }
   next();
 });
-
 const User = mongoose.model('User', userSchema);
 
 module.exports = User;
