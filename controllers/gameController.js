@@ -194,21 +194,28 @@ exports.surrenderGame = async (req, res) => {
   try {
     const gameId = req.params.id;
     const { userId } = req.body;
+
     if (!userId) {
       return res.status(400).json({ message: 'User ID is required' });
     }
+
     const game = await Game.findById(gameId);
     if (!game) {
       return res.status(404).json({ message: 'Game not found' });
     }
+
     if (!game.isActive || game.endedAt) {
       return res.status(400).json({ message: 'Game is already ended' });
     }
-    const otherPlayer = game.players.find(p => p.toString() !== userId); 
+
+    const otherPlayer = game.players.find(p => !p.equals(userId)); // önemli değişiklik
+
     game.isActive = false;
     game.endedAt = new Date();
     game.winner = otherPlayer || null;
+
     await game.save();
+
     res.json({ message: 'Game ended by surrender', winner: otherPlayer });
   } catch (error) {
     console.error(error);
