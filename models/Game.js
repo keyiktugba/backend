@@ -65,6 +65,24 @@ const gameSchema = new Schema({
       default: 0
     }
   }],
+  matchedMines: [{
+    row: { type: Number, required: true },
+    col: { type: Number, required: true },
+    type: {
+      type: String,
+      enum: ['puan_bolunmesi', 'puan_transferi', 'harf_kaybi', 'ekstra_hamle_engeli', 'kelime_iptali'],
+      required: true
+    }
+  }],
+  matchedRewards: [{
+    row: { type: Number, required: true },
+    col: { type: Number, required: true },
+    type: {
+      type: String,
+      enum: ['bolge_yasagi', 'harf_yasagi', 'ekstra_hamle'],
+      required: true
+    }
+  }],
   winner: {
     type: Schema.Types.ObjectId,
     ref: 'User',

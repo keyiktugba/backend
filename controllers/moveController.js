@@ -29,6 +29,26 @@ function extractWordVertical(boardState, x, y) {
     }
     return { word, startX: x, startY };
 }
+function updateGameStatsWithTiles(game, placedTiles) {
+    if (!game.matchedMines) game.matchedMines = [];
+    if (!game.matchedRewards) game.matchedRewards = [];
+
+    placedTiles.forEach(({ x, y }) => {
+        // Mine eşleşmelerini kontrol et
+        const matchedMine = game.mines.find(m => m.row === y && m.col === x);
+        if (matchedMine) {
+            game.matchedMines.push({ row: y, col: x, type: matchedMine.type });
+        }
+
+        // Reward eşleşmelerini kontrol et
+        const matchedReward = game.rewards.find(r => r.row === y && r.col === x);
+        if (matchedReward) {
+            game.matchedRewards.push({ row: y, col: x, type: matchedReward.type });
+        }
+    });
+}
+
+
 function calculateWordPoints(word, boardState, startX, startY, isHorizontal, game, playerId) {
     let totalPoints = 0;
     let wordMultiplier = 1;
@@ -305,7 +325,7 @@ module.exports = {
                 firstMove
             });
             await move.save();
-
+            updateGameStatsWithTiles(game, placedTiles);
             const nextPlayerId = (game.currentTurn.toString() === game.players[0]._id.toString())
                 ? game.players[1]._id
                 : game.players[0]._id;
