@@ -199,7 +199,7 @@ exports.surrenderGame = async (req, res) => {
       return res.status(400).json({ message: 'User ID is required' });
     }
 
-    const game = await Game.findById(gameId);
+    const game = await Game.findById(gameId).populate('scores.player');
     if (!game) {
       return res.status(404).json({ message: 'Game not found' });
     }
@@ -208,13 +208,26 @@ exports.surrenderGame = async (req, res) => {
       return res.status(400).json({ message: 'Game is already ended' });
     }
 
-    const otherPlayer = game.players.find(p => !p.equals(userId)); // önemli değişiklik
-
+    const otherPlayer = game.players.find(p => !p.equals(userId));
+    game.winner = otherPlayer || null;
     game.isActive = false;
     game.endedAt = new Date();
-    game.winner = otherPlayer || null;
-
     await game.save();
+
+    for (const scoreEntry of game.scores) {
+      const user = await User.findById(scoreEntry.player._id);
+      if (user) {
+        user.total_points += scoreEntry.score;
+        user.games_played += 1;
+        if (game.winner && user._id.toString() === game.winner.toString()) {
+          user.games_won += 1;
+        }
+        user.success_rate = user.games_played > 0
+          ? (user.games_won / user.games_played) * 100
+          : 0;
+        await user.save();
+      }
+    }
 
     res.json({ message: 'Game ended by surrender', winner: otherPlayer });
   } catch (error) {
@@ -225,14 +238,31 @@ exports.surrenderGame = async (req, res) => {
 exports.endGame = async (req, res) => {
   try {
     const { gameId, winnerId } = req.body;
-    const game = await Game.findById(gameId);
+    const game = await Game.findById(gameId).populate('scores.player');
     if (!game) {
       return res.status(404).json({ message: 'Game not found' });
     }
+    if (game.endedAt) {
+      return res.status(400).json({ message: 'Game is already ended' });
+    }
     game.winner = winnerId;
     game.isActive = false;
-    game.endedAt = Date.now(); 
+    game.endedAt = new Date(); 
     await game.save();
+    for (const scoreEntry of game.scores) {
+      const user = await User.findById(scoreEntry.player._id);
+      if (user) {
+        user.total_points += scoreEntry.score;
+        user.games_played += 1;
+        if (winnerId && user._id.toString() === winnerId.toString()) {
+          user.games_won += 1;
+        }
+        user.success_rate = user.games_played > 0
+          ? (user.games_won / user.games_played) * 100
+          : 0;
+        await user.save();
+      }
+    }
     res.json({ 
       message: 'Game ended successfully', 
       winner: winnerId 

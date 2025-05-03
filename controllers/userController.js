@@ -1,36 +1,27 @@
 //controllers/userController.js
-
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const express = require('express');
 
-// JWT token oluşturma fonksiyonu
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET || 'gizlianahtar', {
     expiresIn: '30d'
   });
 };
-
-// User registration
 exports.registerUser = async (req, res) => {
   try {
     const { username, email, password } = req.body;
-
     console.log(username);
-    // Check if the email is already in use
     const userExists = await User.findOne({ email });
     if (userExists) {
       return res.status(400).json({ message: 'This email address is already in use' });
     }
-
-    // Create a new user
     const newUser = await User.create({
       username,
       email,
       password_hash: password
     });
-
     console.log('kullanıcı oluşturuldu');
     res.status(201).json({
       _id: newUser._id,
@@ -43,24 +34,17 @@ exports.registerUser = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
-// User login
 exports.loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
-
-    // Find the user by email
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
-
-    // Check the password
     const isMatch = await user.matchPassword(password);
     if (!isMatch) {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
-
     res.json({
       _id: user._id,
       username: user.username,
@@ -72,13 +56,10 @@ exports.loginUser = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
-// Get user profile
 exports.getUserProfile = async (req, res) => {
   try {
     const userId = req.query.id;
     const user = await User.findById(userId);
-
     if (user) {
       res.json({
         _id: user._id,
@@ -96,8 +77,6 @@ exports.getUserProfile = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
-// Get leaderboard (top users by points)
 exports.getLeaderboard = async (req, res) => {
   try {
     const users = await User.find().sort({ total_points: -1 }).limit(10)

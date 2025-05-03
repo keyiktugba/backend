@@ -13,7 +13,6 @@ const wordSchema = new mongoose.Schema({
   }
 });
 
-// Kelimenin uzunluğunu otomatik hesaplama
 wordSchema.pre('save', function(next) {
   this.uzunluk = this.kelime.length;
   next();
