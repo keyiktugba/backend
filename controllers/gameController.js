@@ -172,7 +172,9 @@ exports.getCompletedGames = async (req, res) => {
         opponentUsername: opponentScoreEntry?.player?.username || 'Bilinmiyor',
         opponentScore,
         result,
-        winner: game.winner 
+        winner: game.winner,
+        matchedMines: game.matchedMines, 
+        matchedRewards: game.matchedRewards,
       };
     });
     res.json(formattedGames);
