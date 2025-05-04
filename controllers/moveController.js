@@ -1,6 +1,7 @@
 //controller/moveController.js
 const Move = require('../models/Move');
 const Game = require('../models/Game');
+const { io } = require('../index');
 const { validWordsSet, letterPointsMap } = require('../utils/wordUtils');
 function extractWordHorizontal(boardState, x, y) {
     let startX = x;
@@ -325,6 +326,12 @@ module.exports = {
                 firstMove
             });
             await move.save();
+            global.io.to(gameId).emit('move-made', {
+                gameId,
+                playerId,
+                move: placedTiles
+              });
+            console.log("Yeni bağlantı:", socket.id);
             updateGameStatsWithTiles(game, placedTiles);
             const nextPlayerId = (game.currentTurn.toString() === game.players[0]._id.toString())
                 ? game.players[1]._id

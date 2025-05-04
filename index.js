@@ -6,30 +6,24 @@ const cors = require('cors');
 const http = require('http');
 const socketIo = require('socket.io');
 const apiRoutes = require('./api');
+module.exports = { io };
 
 dotenv.config();
-
 const PORT = process.env.PORT || 3001;
-
 const app = express();
-
 app.use(cors());
 app.use(express.json());
 
-// API routes
 app.use('/api', apiRoutes);
 
-// Connect to MongoDB
 mongoose.connect("mongodb+srv://medihatugbakeyik:Hh5U8sFS421LnavH@wordmine1.klza6gv.mongodb.net/wordmines")
   .then(() => console.log("MongoDB bağlantısı başarılı"))
   .catch(err => console.error("MongoDB bağlantı hatası:", err));
 
-// Basic route
 app.get('/', (req, res) => {
   res.send('Kelime Mayınları API çalışıyor');
 });
 
-// HTTP server and Socket.IO setup
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
@@ -37,8 +31,7 @@ const io = socketIo(server, {
     methods: ["GET", "POST"]
   }
 });
-
-// Socket.IO events
+global.io = io;
 io.on('connection', (socket) => {
   console.log('Yeni bir kullanıcı bağlandı', socket.id);
   
@@ -79,7 +72,6 @@ io.on('connection', (socket) => {
   });
 });
 
-// Start the server, silme
 server.listen(PORT, () => {
   console.log(`Sunucu çalışıyor 🚀`);
 });
