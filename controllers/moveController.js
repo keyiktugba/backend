@@ -234,6 +234,10 @@ function validateMove(boardState, placedTiles, firstMove,game, playerId) {
             if (!isConnectedToOld) {
                 throw new Error("Yeni hamledeki taşlar tahtadaki mevcut taşlara komşu olmalıdır.");
             }
+         const isValid = isValidPlacement(boardState, placedTiles);
+            if (!isValid) {
+                throw new Error("Harfler uygun şekilde yerleştirilmemiş.");
+            }
         }
     }
     placedTiles.forEach(tile => {
@@ -316,10 +320,7 @@ module.exports = {
             if (game.currentTurn.toString() !== playerId.toString()) {
                 return res.status(400).json({ message: "Sıra sizde değil." });
             }
-            const isValid = isValidPlacement(boardState, placedTiles);
-            if (!isValid) {
-                throw new Error("Harfler uygun şekilde yerleştirilmemiş.");
-            }
+
             const { validWords, totalPoints } = validateMove(boardState, placedTiles, firstMove,game,game.currentTurn);
             const move = new Move({
                 gameId,
