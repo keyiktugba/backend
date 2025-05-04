@@ -309,6 +309,9 @@ module.exports = {
             if (!game.players || game.players.length < 2) {
                 return res.status(400).json({ message: "Oyuncu bilgileri eksik." });
             }
+            if (!game.currentTurn) {
+                return res.status(400).json({ message: "Geçerli oyuncu belirlenmemiş." });
+            }
             if (game.currentTurn.toString() !== playerId.toString()) {
                 return res.status(400).json({ message: "Sıra sizde değil." });
             }
