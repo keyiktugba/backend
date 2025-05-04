@@ -10,7 +10,7 @@ function setupSocket(server) {
   });
 
   io.on('connection', (socket) => {
-    console.log('Yeni bir kullanıcı bağlandı', socket.id);
+    console.log('Yeni bir kullanıcı bağlandı');
 
     socket.on('join-game', (gameId) => {
       socket.join(gameId);

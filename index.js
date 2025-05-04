@@ -25,7 +25,7 @@ app.get('/', (req, res) => {
 
 const server = http.createServer(app);
 const io = setupSocket(server); 
-
+global.io = io;
 server.listen(PORT, () => {
   console.log(`Sunucu çalışıyor 🚀`);
 });
