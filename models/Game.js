@@ -54,6 +54,7 @@ const gameSchema = new Schema({
     ref: 'User',
     required: true
   },
+  
   scores: [{
     player: {
       type: Schema.Types.ObjectId,
