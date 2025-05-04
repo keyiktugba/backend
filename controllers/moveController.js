@@ -2,8 +2,118 @@
 const Move = require('../models/Move');
 const Game = require('../models/Game');
 const { validWordsSet, letterPointsMap } = require('../utils/wordUtils');
-const kelimeListesi = require('../assets/kelimeler.json');
 function extractWordHorizontal(boardState, x, y) {
+    let startX = x;
+    // Başlangıcı bul
+    while (startX > 0 && boardState[y][startX - 1] !== '') {
+        startX--;
+    }
+
+    let word = '';
+    let currentX = startX;
+    while (currentX < boardState[0].length && boardState[y][currentX] !== '') {
+        word += boardState[y][currentX];
+        currentX++;
+    }
+
+    // Boşluk kontrolü: Eğer (startX, currentX) arasında boşluk varsa geçersiz
+    for (let i = startX; i < currentX; i++) {
+        if (boardState[y][i] === '') {
+            return { word: '', startX: -1, startY: y };  // geçersiz kelime
+        }
+    }
+
+    return { word, startX, startY: y };
+}
+
+function extractWordVertical(boardState, x, y) {
+    let startY = y;
+    // Başlangıcı bul
+    while (startY > 0 && boardState[startY - 1][x] !== '') {
+        startY--;
+    }
+
+    let word = '';
+    let currentY = startY;
+    while (currentY < boardState.length && boardState[currentY][x] !== '') {
+        word += boardState[currentY][x];
+        currentY++;
+    }
+
+    // Boşluk kontrolü
+    for (let i = startY; i < currentY; i++) {
+        if (boardState[i][x] === '') {
+            return { word: '', startX: x, startY: -1 };  // geçersiz kelime
+        }
+    }
+
+    return { word, startX: x, startY };
+}
+
+/*function validateWordExtension(boardState, x, y, letter, isHorizontal) {
+    const newBoard = boardState.map(row => row.slice());
+    newBoard[y][x] = letter;  // Yeni harfi tahtaya yerleştir
+
+    const wordsToCheck = new Set();
+    let formedWords = 0;
+
+    // Yatay kelimeyi çıkar (varsa)
+    let hStartX = x;
+    while (hStartX > 0 && newBoard[y][hStartX - 1] !== '') {
+        hStartX--;
+    }
+    let hWord = '';
+    let hX = hStartX;
+    while (hX < newBoard[0].length && newBoard[y][hX] !== '') {
+        hWord += newBoard[y][hX];
+        hX++;
+    }
+    if (hWord.length > 1) {
+        wordsToCheck.add(hWord.toLocaleLowerCase('tr'));
+        formedWords++;
+    }
+
+    // Dikey kelimeyi çıkar (varsa)
+    let vStartY = y;
+    while (vStartY > 0 && newBoard[vStartY - 1][x] !== '') {
+        vStartY--;
+    }
+    let vWord = '';
+    let vY = vStartY;
+    while (vY < newBoard.length && newBoard[vY][x] !== '') {
+        vWord += newBoard[vY][x];
+        vY++;
+    }
+    if (vWord.length > 1) {
+        wordsToCheck.add(vWord.toLocaleLowerCase('tr'));
+        formedWords++;
+    }
+
+    // Eğer birden fazla kelime oluşuyorsa, geçersiz
+    if (formedWords > 1) {
+        return false; // Birden fazla kelime oluştu, geçersiz
+    }
+
+    // Yalnızca mevcut kelimelerle bağlantılı harf eklemelerine izin ver
+    if (wordsToCheck.size === 0) {
+        return false; // Hiçbir bağlantılı kelime yoksa, geçerli değil
+    }
+
+    // Tüm çıkarılan kelimeleri kontrol et
+    for (let word of wordsToCheck) {
+        if (!validWordsSet.has(word)) {
+            return false; // Eğer kelime geçerli değilse, geçersiz
+        }
+    }
+
+    // Yeni harf ile bağlantılı geçerli kelimeler bulunduysa, geçerli
+    return true;
+}*/
+
+
+
+
+/*function extractWordHorizontal(boardState, x, y) {
     let startX = x;
     while (startX > 0 && boardState[y][startX - 1] !== '') {
         startX--;
@@ -28,7 +138,7 @@ function extractWordVertical(boardState, x, y) {
         currentY++;
     }
     return { word, startX: x, startY };
-}
+}*/
 function updateGameStatsWithTiles(game, placedTiles) {
     if (!game.matchedMines) game.matchedMines = [];
     if (!game.matchedRewards) game.matchedRewards = [];
@@ -142,7 +252,7 @@ function calculateWordPoints(word, boardState, startX, startY, isHorizontal, gam
 
     return totalPoints * wordMultiplier;
 }
-function validateWordExtension(boardState, x, y, letter, isHorizontal) {
+/*function validateWordExtension(boardState, x, y, letter, isHorizontal) {
     let isValid = true;
     if (isHorizontal) {
         let startX = x;
@@ -214,7 +324,52 @@ function validateWordExtension(boardState, x, y, letter, isHorizontal) {
         }
     }
     return isValid;
+}*/function validateWordExtension(boardState, x, y, letter, isHorizontal) {
+    const newBoard = boardState.map(row => row.slice());
+    newBoard[y][x] = letter;  // Yeni harfi tahtaya yerleştir
+
+    const wordsToCheck = new Set();
+
+    // Yatay kelimeyi çıkar
+    let hStartX = x;
+    while (hStartX > 0 && newBoard[y][hStartX - 1] !== '') {
+        hStartX--;
+    }
+    let hWord = '';
+    let hX = hStartX;
+    while (hX < newBoard[0].length && newBoard[y][hX] !== '') {
+        hWord += newBoard[y][hX];
+        hX++;
+    }
+    if (hWord.length > 1) {
+        wordsToCheck.add(hWord.toLocaleLowerCase('tr'));
+    }
+
+    // Dikey kelimeyi çıkar
+    let vStartY = y;
+    while (vStartY > 0 && newBoard[vStartY - 1][x] !== '') {
+        vStartY--;
+    }
+    let vWord = '';
+    let vY = vStartY;
+    while (vY < newBoard.length && newBoard[vY][x] !== '') {
+        vWord += newBoard[vY][x];
+        vY++;
+    }
+    if (vWord.length > 1) {
+        wordsToCheck.add(vWord.toLocaleLowerCase('tr'));
+    }
+
+    // Tüm çıkarılan kelimeleri kontrol et
+    for (let word of wordsToCheck) {
+        if (!validWordsSet.has(word)) {
+            return false;
+        }
+    }
+
+    return true;
 }
+
 function validateMove(boardState, placedTiles, firstMove,game, playerId) {
     let validWords = [];
     let totalPoints = 0;
@@ -225,14 +380,27 @@ function validateMove(boardState, placedTiles, firstMove,game, playerId) {
             throw new Error("İlk hamlede merkez karesi (7,7) kullanılmalıdır.");
         }
     }
-    if (!firstMove) {
+   /* if (!firstMove) {
         const isConnectedToOld = placedTiles.some(({ x, y }) =>
             hasAdjacentToOldTiles(boardState, x, y, placedTiles)
         );
         if (!isConnectedToOld) {
             throw new Error("Yeni hamledeki taşlar tahtadaki mevcut taşlara komşu olmalıdır.");
         }
+    }*/if (!firstMove) {
+    if (placedTiles.length === 0) {
+        // Taş yerleştirilmemişse (örneğin pas geçilmişse), komşuluk kontrolü yapılmaz.
+        // Burada hiçbir şey yapma veya sadece return et.
+    } else {
+        const isConnectedToOld = placedTiles.some(({ x, y }) =>
+            hasAdjacentToOldTiles(boardState, x, y, placedTiles)
+        );
+
+        if (!isConnectedToOld) {
+            throw new Error("Yeni hamledeki taşlar tahtadaki mevcut taşlara komşu olmalıdır.");
+        }
     }
+}
     placedTiles.forEach(tile => {
         const { x, y, letter } = tile;
         if (boardState[y][x] !== '' && boardState[y][x] !== letter) {
