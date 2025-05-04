@@ -119,7 +119,9 @@ exports.getGameById = async (req, res) => {
     const game = await Game.findById(req.params.id)
       .populate('players', 'username')
       .populate('scores.player', 'username')
-      .populate('currentTurn', 'username');
+      .populate('currentTurn', 'username')
+      .populate('matchedMines', 'username') // matchedMines'deki oyuncuları populate ediyoruz
+      .populate('matchedRewards', 'username'); // matchedRewards'daki oyuncuları populate ediyoruz
     if (!game) {
       return res.status(404).json({ message: 'Game not found' });
     }
