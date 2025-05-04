@@ -329,12 +329,12 @@ module.exports = {
                 firstMove
             });
             await move.save();
-            global.io.to(gameId).emit('move-made', {
+            io.to(gameId).emit('move-made', {
                 gameId,
                 playerId,
                 move: placedTiles
               });
-            console.log("Yeni bağlantı:", socket.id);
+            console.log("Yeni bağlantı");
             updateGameStatsWithTiles(game, placedTiles);
             const nextPlayerId = (game.currentTurn.toString() === game.players[0]._id.toString())
                 ? game.players[1]._id
