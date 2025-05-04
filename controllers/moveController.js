@@ -251,7 +251,46 @@ function calculateWordPoints(word, boardState, startX, startY, isHorizontal, gam
     }
 
     return totalPoints * wordMultiplier;
+}function isValidPlacement(boardState, placedTiles) {
+    if (placedTiles.length === 0) return false;
+
+    const allX = placedTiles.map(t => t.x);
+    const allY = placedTiles.map(t => t.y);
+    const uniqueX = [...new Set(allX)];
+    const uniqueY = [...new Set(allY)];
+
+    const isHorizontal = uniqueY.length === 1;
+    const isVertical = uniqueX.length === 1;
+
+    if (!isHorizontal && !isVertical) return false;
+
+    if (isHorizontal) {
+        const y = uniqueY[0];
+        const minX = Math.min(...allX);
+        const maxX = Math.max(...allX);
+        for (let x = minX; x <= maxX; x++) {
+            const hasTile = placedTiles.some(t => t.x === x && t.y === y);
+            const isBoardFilled = boardState[y][x] !== '';
+            if (!hasTile && !isBoardFilled) {
+                return false;
+            }
+        }
+    } else if (isVertical) {
+        const x = uniqueX[0];
+        const minY = Math.min(...allY);
+        const maxY = Math.max(...allY);
+        for (let y = minY; y <= maxY; y++) {
+            const hasTile = placedTiles.some(t => t.x === x && t.y === y);
+            const isBoardFilled = boardState[y][x] !== '';
+            if (!hasTile && !isBoardFilled) {
+                return false;
+            }
+        }
+    }
+
+    return true;
 }
+
 /*function validateWordExtension(boardState, x, y, letter, isHorizontal) {
     let isValid = true;
     if (isHorizontal) {
@@ -482,7 +521,10 @@ module.exports = {
             if (game.currentTurn.toString() !== playerId.toString()) {
                 return res.status(400).json({ message: "Sıra sizde değil." });
             }
-
+            const isValid = isValidPlacement(boardState, placedTiles);
+            if (!isValid) {
+                throw new Error("Harfler uygun şekilde yerleştirilmemiş.");
+            }
             const { validWords, totalPoints } = validateMove(boardState, placedTiles, firstMove,game,game.currentTurn);
             const move = new Move({
                 gameId,
