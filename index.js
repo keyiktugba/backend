@@ -6,7 +6,6 @@ const cors = require('cors');
 const http = require('http');
 const socketIo = require('socket.io');
 const apiRoutes = require('./api');
-module.exports = { io };
 
 dotenv.config();
 const PORT = process.env.PORT || 3001;
@@ -75,3 +74,4 @@ io.on('connection', (socket) => {
 server.listen(PORT, () => {
   console.log(`Sunucu çalışıyor 🚀`);
 });
+module.exports = { io };
